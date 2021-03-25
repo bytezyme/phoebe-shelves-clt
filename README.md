@@ -35,11 +35,17 @@ Owl Shelves has the following dependencies:
 
 #### 2. Setting Up Configurations
 
-The only configuration required is the path to the data directory (by default, it goes to the `data` folder). You can modify this path in two ways:
+The script relies on a configuration file (`configs.conf`) located in the `code` folder. This configuration file only stores the path to the data directory that will store the CSV files. To setup the configuration file, you can use the included `config` option:
 
-1. Open up the `code/configs.conf` file and replace the default location with the absolute path to the new directory
-    - E.g., `data_directory = <path_to_directory>`
-2. Run `python3 code/core.py config -d <path_to_directory>`
+```shell
+# Initialize configuration using the default data directory path
+python3 code/core.py config
+
+# Initialize configuration using a custom data directory path
+python3 code/core.py config -d <path_to_custom_directory>
+```
+
+To modify the path afterwards, use the second option above.
 
 #### 3. Initializing Databases
 

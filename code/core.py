@@ -19,22 +19,22 @@ def read_configs():
     config.read(config_path)
     return(config)
 
-def write_configs(new_data_path):
+def write_configs(data_path):
     """ Write out configurations to the config file
     
     # TODO: May need to make more general
 
     Inputs:
-        new_data_path {string} -- Locatin of the new data directory
+        data_path {string} -- Locatin of the new data directory
 
     Outputs:
         Saves updated config file to the config_path
     """
 
-    config = read_configs()
-    config['PATHS']['data_directory'] = new_data_path
+    config = configparser.ConfigParser()
+    config['PATHS'] = {'data_directory': data_path}
     with open (config_path, 'w') as config_file:
-        config.write(config_file)          
+        config.write(config_file)
 
 def arg_parser():
     """ Parse command line arguments
@@ -124,6 +124,8 @@ def main():
         # User specifies update to data_directory
         if args.directory:
             write_configs(args.directory)
+        else:
+            write_configs('data')
 
     elif args.mode == 'view':
         # Setup source database
