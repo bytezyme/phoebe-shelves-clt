@@ -1,4 +1,3 @@
 # Owl Shelves Command Line Tools
 
-This is a small tool to manage a book database via the command line
-
+Owl Shelves is (currently) a command line-based reading management tool based on simple CSV files.

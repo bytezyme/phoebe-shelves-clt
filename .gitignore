@@ -1,0 +1,7 @@
+# General Files
+__pycache__
+.vscode
+
+# Custom/user Files
+data/books.csv
+data/reading.csv
