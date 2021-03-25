@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 
-from data_access import print_db, print_filtered_db
+from data_view import print_db, print_filtered_db
 
 ### Common Functions
 

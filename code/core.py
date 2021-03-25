@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import configparser
 from data_management import create_databases, update_book_db, update_reading_db
-from data_access import print_db
+from data_view import print_db
 
 # General Use Constants
 config_path = "code/configs.conf"
@@ -70,23 +70,23 @@ def arg_parser():
                                help='Path to database directory')
 
     ## Access Parser
-    access_parser = subparsers.add_parser('access',
-                                          help='Visualize databases')
+    view_parser = subparsers.add_parser('view',
+                                        help='Visualize databases')
 
     ### Initial Separation
-    access_parser.add_argument('-bd', '--booksdb',
-                               action='store_true', 
-                               help='Flag to indicate access to book database')
+    view_parser.add_argument('-bd', '--booksdb',
+                             action='store_true', 
+                             help='Flag to indicate access to book database')
 
-    access_parser.add_argument('-rd', '--readingdb', 
-                               action='store_true',
-                               help='Flag to indicate access to the reading '
+    view_parser.add_argument('-rd', '--readingdb', 
+                             action='store_true',
+                             help='Flag to indicate access to the reading '
                                     'events database')
 
     ### Actions
-    access_parser.add_argument('-p', '--print',
-                               action='store_true',
-                               help='Indicates to print the details')
+    view_parser.add_argument('-p', '--print',
+                             action='store_true',
+                             help='Indicates to print the details')
 
     ## Management Parser
     management_parser = subparsers.add_parser('manage',
@@ -125,7 +125,7 @@ def main():
         if args.directory:
             write_configs(args.directory)
 
-    elif args.mode == 'access':
+    elif args.mode == 'view':
         # Setup source database
         database_path = read_configs().get('PATHS', 'data_directory') + '/'
         if args.booksdb:
