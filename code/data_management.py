@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+import numpy as np
 
 from data_view import print_db, print_filtered_db
 
@@ -61,7 +62,7 @@ def create_books_db(db_path):
     """
 
     book_db_cols = ['Title', 'Author', 'Author FN', 'Author MN',
-                    'Author LN', 'Length', 'Times Read', 'Genre']
+                    'Author LN', 'Length', 'Times Read', 'Rating', 'Genre']
     pd.DataFrame(columns=book_db_cols).to_csv(db_path, index=False)
     print('Successfully created book database.')
 
@@ -76,7 +77,7 @@ def create_reading_db(db_path):
         Prints confirmation to the terminal
     """
 
-    book_db_cols = ['Title', 'Start', 'Finish', 'Reading Time']
+    book_db_cols = ['Title', 'Start', 'Finish', 'Reading Time', 'Rating']
     pd.DataFrame(columns=book_db_cols).to_csv(db_path, index=False)
     print('Successfully created reading event database.')
 
@@ -158,7 +159,8 @@ def add_new_book(books_db, book_title):
                 'Author FN': input('Author First Name: '),
                 'Author MN': input('Author Middle Name: '),
                 'Author LN': input('Author Last Name: '),
-                'Length': int(input('Book Length (Pages): ')),
+                'Length': input('Book Length (Pages): '),
+                'Rating': input('Rating (1-5): '),
                 'Genre': input('Book Genre: ')}
 
     new_book['Author'] = generate_full_author(new_book['Author FN'],
@@ -186,7 +188,8 @@ def edit_existing_book(books_db, book_title):
                  3: 'Author MN',
                  4: 'Author LN',
                  5: 'Length',
-                 6: 'Genre'}
+                 6: 'Rating',
+                 7: 'Genre'}
 
     # Quickly generate the string
     prop_edit_prompt = ['[{}] {}'.format(key, value)
@@ -201,8 +204,12 @@ def edit_existing_book(books_db, book_title):
     # Get new value
     new_value = input('What is the new {} value: '.format(prop_to_update))
 
-    # Change to integer if updating length
-    new_value = int(new_value) if prop_to_update == 'Length' else new_value
+    # Change type as needed:
+    if prop_to_update == 'Length':
+        new_value = int(new_value)
+    elif prop_to_update == 'Rating':
+        new_value = float(new_value)
+
     # Update Value
     books_db.loc[books_db['Title'] == book_title, prop_to_update] = new_value
 
@@ -333,6 +340,40 @@ def update_reading_count(reading_db, db_directory, book_title):
 
     books_db.to_csv(books_db_path, index=False)
 
+def update_book_rating(reading_db, db_directory, book_title):
+    """ Propogates average rating to the book database
+
+    Inputs:
+        reading_db {DataFrame} -- Pandas DataFrame of the reading database
+        db_directory {string} -- Path to data directory
+        book_title -- Title of book to use for the entry
+
+    Outputs:
+        Saves a new books.csv with the updated average rating
+    """
+
+    # Filter and Make sure we create numerics for rating
+    title_filter = reading_db['Title'] == book_title
+    avg_rating = reading_db.loc[title_filter, 'Rating'].mean()
+
+    # Only update book database if we can calculate an average
+    if pd.notna(avg_rating): # There is a rating
+        avg_rating = round(avg_rating, 1)
+
+    # Update book db
+    books_db_path = db_directory + '/books.csv'
+    books_db = pd.read_csv(books_db_path)
+
+    if book_title in books_db['Title'].values:
+        books_db.loc[books_db['Title'] == book_title, 'Rating'] = avg_rating
+    else:
+        print('Cannot find {} in the books database.'.format(book_title))
+        print('Let\'s make a new entry...')
+        books_db = add_new_book(books_db, book_title)
+        books_db.loc[books_db['Title'] == book_title, 'Rating'] = avg_rating
+    
+    books_db.to_csv(books_db_path, index=False)
+
 
 def add_reading_entry(reading_db, book_title):
     """ Adds a new reading entry for a book
@@ -348,18 +389,24 @@ def add_reading_entry(reading_db, book_title):
     print('Please enter the following optional information for a new entry:')
 
     # Get optional information
-    start_date = pd.to_datetime(input('Start Date (Optional): ')).date()
-    finish_date = pd.to_datetime(input('End Date (Optional): ')).date()
+    start_date = pd.to_datetime(input('Start Date: ')).date()
+    finish_date = pd.to_datetime(input('End Date: ')).date()
+    rating = input('Rating (1-5): ')
+    rating = int(rating) if rating != '' else np.nan # Format rating
 
     # Create temporary entry object
     new_entry_dict = {'Title': book_title,
                     'Start': start_date,
                     'Finish': finish_date,
                     'Reading Time': update_reading_time(start_date,
-                                                        finish_date)
+                                                        finish_date),
+                    'Rating': rating
                     }
 
-    return(reading_db.append(new_entry_dict, ignore_index = True))
+    # Update reading database
+    reading_db = reading_db.append(new_entry_dict, ignore_index = True)
+
+    return(reading_db)
 
 def edit_reading_entry(reading_db, book_title):
     """ Edits properties of an existing reading entry
@@ -378,13 +425,35 @@ def edit_reading_entry(reading_db, book_title):
 
     print('Which property would you like to edit?')
 
-    # TODO: Enable editing of the title
     # TODO: Have a way to catch unacceptable inputs
+    # TODO: Use a generic property requester
 
-    property_to_update = int(input('[1] Start | [2] Finish (Pass the number): '))
-    property_to_update = 'Start' if (property_to_update == 1) else 'Finish'
-    new_property_val = pd.to_datetime(input('What is the new date?: ')).date()
-    reading_db.loc[index_to_edit, property_to_update] = new_property_val
+    prop_dict = {1: 'Title',
+                 2: 'Start',
+                 3: 'Finish',
+                 4: 'Rating',
+                 }
+
+    # Quickly generate the string
+    prop_edit_prompt = ['[{}] {}'.format(key, value)
+                        for key,value
+                        in prop_dict.items()]
+    prop_edit_prompt = '\n'.join(prop_edit_prompt)
+
+    # Request Prompt
+    prop_to_update = int(input(prop_edit_prompt + '\n'))
+    prop_to_update = prop_dict[prop_to_update]
+
+    # Get new value
+    new_value = input('What is the new {} value: '.format(prop_to_update))
+
+    # Correctly format the information
+    if prop_to_update == 'Start' or prop_to_update == 'Finish':
+        new_value = pd.to_datetime(new_value).date()
+    elif prop_to_update == 'Rating':
+        new_value = int(new_value) if new_value != '' else np.nan
+
+    reading_db.loc[index_to_edit, prop_to_update] = new_value
 
     # Do autoupdate of reading time
     new_time = update_reading_time(reading_db.loc[index_to_edit, 'Start'],
@@ -445,19 +514,24 @@ def update_reading_db(db_directory):
             if switch_to_edit in ['Y', 'y']:
                 reading_rb = edit_reading_entry(reading_db, book_title)
                 update_reading_count(reading_db, db_directory, book_title)
+                update_book_rating(reading_db, db_directory, book_title)
             else:
                 reading_db = add_reading_entry(reading_db, book_title)
                 update_reading_count(reading_db, db_directory, book_title)
+                update_book_rating(reading_db, db_directory, book_title)
         else:
             reading_db = add_reading_entry(reading_db, book_title)
             update_reading_count(reading_db, db_directory, book_title)
+            update_book_rating(reading_db, db_directory, book_title)
 
     elif update_mode == 2:
         reading_db = edit_reading_entry(reading_db, book_title)
         update_reading_count(reading_db, db_directory, book_title)
+        update_book_rating(reading_db, db_directory, book_title)
     else:
         reading_db = remove_reading_entry(reading_db, book_title)
         update_reading_count(reading_db, db_directory, book_title)
+        update_book_rating(reading_db, db_directory, book_title)
 
     reading_db.sort_values(['Finish', 'Start'], na_position='last',
                            inplace=True)
