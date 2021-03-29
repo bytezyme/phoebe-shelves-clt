@@ -12,7 +12,7 @@ def select_mode():
     Outputs:
         update_mode {int} -- Indicates which of 3 update modes was selected
     """
-    update_mode = int(input('Do you want to [1] add a new entry, [2] edit a'
+    update_mode = int(input('Do you want to [1] add a new entry, [2] edit a '
                             'current entry, or [3] remove an entry?: '))
 
     while update_mode not in [1,2,3]:
@@ -27,7 +27,8 @@ def prompt_for_title(db, update_mode):
     Adding a book can accept any potential title. There are custom actions to
     deal with cases for the books and reading databases defined in the
     related functions. The other two update modes will only accept a title that
-    already exists in a database.
+    already exists in a database. This is a specialized case because editing or
+    removing a title requires it to already be present.
 
     Inputs:
         db {DataFrame} -- DataFrame of books or reading entries
@@ -47,6 +48,27 @@ def prompt_for_title(db, update_mode):
             book_title = input('Book doesn\'t exist. '
                                'Please reenter the title: ')
         return(book_title)
+
+def prompt_for_property(prop_dict):
+    """ Consolidate general property prompt
+
+    Requests user to select a property from the database to edit and the 
+    corresponding new value. The "title" is treated differently because edit
+    mode enable the user to change a title to something not present
+
+    """
+    prop_edit_prompt = ['[{}] {}'.format(key, value)
+                        for key,value
+                        in prop_dict.items()]
+    prop_edit_prompt = '\n'.join(prop_edit_prompt)
+
+    # Request Prompt
+    prop_to_update = int(input(prop_edit_prompt + '\n'))
+    prop_to_update = prop_dict[prop_to_update]
+
+    # Get new value
+    new_value = input('What is the new {} value: '.format(prop_to_update))
+    return((new_value, prop_to_update))
 
 ### Database Creation
 
@@ -191,18 +213,7 @@ def edit_existing_book(books_db, book_title):
                  6: 'Rating',
                  7: 'Genre'}
 
-    # Quickly generate the string
-    prop_edit_prompt = ['[{}] {}'.format(key, value)
-                        for key,value
-                        in prop_dict.items()]
-    prop_edit_prompt = '\n'.join(prop_edit_prompt)
-
-    # Request Prompt
-    prop_to_update = int(input(prop_edit_prompt + '\n'))
-    prop_to_update = prop_dict[prop_to_update]
-
-    # Get new value
-    new_value = input('What is the new {} value: '.format(prop_to_update))
+    new_value, prop_to_update = prompt_for_property(prop_dict)
 
     # Change type as needed:
     if prop_to_update == 'Length':
@@ -426,7 +437,6 @@ def edit_reading_entry(reading_db, book_title):
     print('Which property would you like to edit?')
 
     # TODO: Have a way to catch unacceptable inputs
-    # TODO: Use a generic property requester
 
     prop_dict = {1: 'Title',
                  2: 'Start',
@@ -434,18 +444,7 @@ def edit_reading_entry(reading_db, book_title):
                  4: 'Rating',
                  }
 
-    # Quickly generate the string
-    prop_edit_prompt = ['[{}] {}'.format(key, value)
-                        for key,value
-                        in prop_dict.items()]
-    prop_edit_prompt = '\n'.join(prop_edit_prompt)
-
-    # Request Prompt
-    prop_to_update = int(input(prop_edit_prompt + '\n'))
-    prop_to_update = prop_dict[prop_to_update]
-
-    # Get new value
-    new_value = input('What is the new {} value: '.format(prop_to_update))
+    new_value, prop_to_update = prompt_for_property(prop_dict)
 
     # Correctly format the information
     if prop_to_update == 'Start' or prop_to_update == 'Finish':
