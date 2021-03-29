@@ -1,6 +1,7 @@
 # General Files
 __pycache__
 .vscode
+.DS_Store
 
 # Custom/user Files
 data/books.csv

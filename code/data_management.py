@@ -299,14 +299,47 @@ def update_reading_time(start, finish):
     if pd.isnull(start) or pd.isnull(finish):
         return(pd.NaT)
     else:
-        return(finish - start).days
+        return((finish - start).days + 1)
+
+def update_reading_count(reading_db, db_directory, book_title):
+    """ Update reading count in books.csv from reading entries
+
+    Inputs:
+        reading_db {DataFrame} -- Pandas DataFrame of the reading database
+        db_directory {string} -- Path to data directory
+        book_title -- Title of book to use for the entry
+
+    Outputs:
+        Saves a new books.csv with updated read count to disk
+    """
+
+    # Calculate read count
+    title_filter = reading_db['Title'] == book_title
+    finish_filter = reading_db['Finish'].notna()
+    read_cnt = int(reading_db.loc[title_filter & finish_filter].shape[0])
+
+    # Update books.csv field
+    books_db_path = db_directory + '/books.csv'
+    books_db = pd.read_csv(books_db_path)
+
+    # Need to make sure the book is present, or create a new entry!
+    if book_title in books_db['Title'].values:
+        books_db.loc[books_db['Title'] == book_title, 'Times Read'] = read_cnt
+    else:
+        print('Cannot find {} in the books database.'.format(book_title))
+        print('Let\'s make a new entry...')
+        books_db = add_new_book(books_db, book_title)
+        books_db.loc[books_db['Title'] == book_title, 'Times Read'] = read_cnt
+
+    books_db.to_csv(books_db_path, index=False)
+
 
 def add_reading_entry(reading_db, book_title):
     """ Adds a new reading entry for a book
     
     Inputs:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        book_title -- Title of book to use for the entry
+        book_title {string} -- Title of book to use for the entry
 
     Outputs:
         reading_db {DataFrame} -- DataFrame with new reading entry
@@ -333,7 +366,7 @@ def edit_reading_entry(reading_db, book_title):
     
     Inputs:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        book_title -- Title of book to filter for the reading entry
+        book_title {string} -- Title of book to filter for the reading entry
 
     Outputs:
         reading_db {DataFrame} -- DataFrame with updated entriy
@@ -365,7 +398,7 @@ def remove_reading_entry(reading_db, book_title):
     
     Inputs:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        book_title -- Title of book to filter for the reading entry
+        book_title {string} -- Title of book to filter for the reading entry
 
     Outputs:
         reading_db {DataFrame} -- DataFrame with removed entry
@@ -399,7 +432,7 @@ def update_reading_db(db_directory):
     # Print full database for ease of viewing
     print_db(db_path)
 
-    update_mode = int(input('Do you want to [1] add a new entry, [2] edit a'
+    update_mode = int(input('Do you want to [1] add a new entry, [2] edit a '
                             'current entry, or [3] remove an entry?: '))
 
     book_title = prompt_for_title(reading_db, update_mode)
@@ -411,15 +444,20 @@ def update_reading_db(db_directory):
                                    '[Y/N]?: ')
             if switch_to_edit in ['Y', 'y']:
                 reading_rb = edit_reading_entry(reading_db, book_title)
+                update_reading_count(reading_db, db_directory, book_title)
             else:
                 reading_db = add_reading_entry(reading_db, book_title)
+                update_reading_count(reading_db, db_directory, book_title)
         else:
             reading_db = add_reading_entry(reading_db, book_title)
+            update_reading_count(reading_db, db_directory, book_title)
 
     elif update_mode == 2:
         reading_db = edit_reading_entry(reading_db, book_title)
+        update_reading_count(reading_db, db_directory, book_title)
     else:
         reading_db = remove_reading_entry(reading_db, book_title)
+        update_reading_count(reading_db, db_directory, book_title)
 
     reading_db.sort_values(['Finish', 'Start'], na_position='last',
                            inplace=True)
