@@ -1,5 +1,5 @@
-import pandas as pd
 import os
+import pandas as pd
 import numpy as np
 
 from data_view import print_db, print_filtered_db
@@ -158,11 +158,47 @@ def generate_full_author(author_fn, author_mn, author_ln):
         author {string} -- Combined author name (First, Middle, Last)
     """
 
-    if author_mn == '':
+    if author_mn == '' or np.isnan(author_mn):
         author = ' '.join([author_fn, author_ln])
     else:
         author = ' '.join([author_fn, author_mn, author_ln])
     return(author)
+
+def prompt_for_author(books_db):
+
+    author_ln = input('Author Last Name: ')
+    # Return list of names that share the last name
+    author_list = list(books_db.loc[books_db['Author LN'] == author_ln,
+                                    'Author'].unique())
+
+    ## Two Options: Either there are options or there are none:
+    if len(author_list) == 0:
+        author_fn = input('Author First Name: ')
+        author_mn = input('Author Middle Name (Optional): ')
+    else:
+        # Allow user to select from existing list or indicate new author
+        print('The author may already exist in the database. Select on of the '
+            'following options to autofill or the last option to add'
+            'a new author.')
+        prompt_strings = ['[{}] {}'.format(option + 1, name)
+                        for option, name
+                        in enumerate(author_list)]
+        new_author_index = len(author_list) + 1 # Last index for prompt
+        prompt_strings.append('[{}] New Author'.format(new_author_index))
+        author_selection = int(input('\n'.join(prompt_strings) + '\n'))
+
+        # Two cases: select new author or not:
+        if author_selection == new_author_index:
+            print('Provide the following information for a new author.')
+            author_fn = input('Author First Name: ')
+            author_mn = input('Author Middle Name (Optional): ')
+        else:
+            author_filter = books_db['Author'] == author_list[author_selection - 1]
+            author_index = books_db[author_filter].index[0] # Only need the first index
+            author_fn = books_db.loc[author_index, 'Author FN']
+            author_mn = books_db.loc[author_index, 'Author MN']
+
+    return(author_fn, author_mn, author_ln)
 
 def add_new_book(books_db, book_title):
     """ Adds a new book to the book database
@@ -175,12 +211,15 @@ def add_new_book(books_db, book_title):
         books_db {DataFrame} -- DataFrame representation with new book
     """
 
-    # Request individual column information
+    # Request the basic information
     print('Please enter the following optional information:')
+
+    author_fn, author_mn, author_ln = prompt_for_author(books_db)
+
     new_book = {'Title': book_title,
-                'Author FN': input('Author First Name: '),
-                'Author MN': input('Author Middle Name: '),
-                'Author LN': input('Author Last Name: '),
+                'Author FN': author_fn,
+                'Author MN': author_mn,
+                'Author LN': author_ln,
                 'Length': input('Book Length (Pages): '),
                 'Rating': input('Rating (1-5): '),
                 'Genre': input('Book Genre: ')}
@@ -349,6 +388,8 @@ def update_reading_count(reading_db, db_directory, book_title):
         books_db = add_new_book(books_db, book_title)
         books_db.loc[books_db['Title'] == book_title, 'Times Read'] = read_cnt
 
+    books_db = books_db.sort_values(by=['Author LN', 'Title'],
+                                    ignore_index = True)
     books_db.to_csv(books_db_path, index=False)
 
 def update_book_rating(reading_db, db_directory, book_title):
@@ -383,8 +424,9 @@ def update_book_rating(reading_db, db_directory, book_title):
         books_db = add_new_book(books_db, book_title)
         books_db.loc[books_db['Title'] == book_title, 'Rating'] = avg_rating
     
+    books_db = books_db.sort_values(by=['Author LN', 'Title'],
+                                    ignore_index = True)
     books_db.to_csv(books_db_path, index=False)
-
 
 def add_reading_entry(reading_db, book_title):
     """ Adds a new reading entry for a book
@@ -476,7 +518,6 @@ def remove_reading_entry(reading_db, book_title):
     index_to_remove = int(input('Which entry (index) would '
                                 'you like to remove?: '))
     return(reading_db.drop(index_to_remove))
-
 
 def update_reading_db(db_directory):
     """ Main function to update book database
