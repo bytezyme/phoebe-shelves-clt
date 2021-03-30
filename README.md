@@ -79,10 +79,10 @@ Currently, the tools only support printing a markdown-formatted visualization of
 
 ```shell
 # View Reading Database
-python3 code/core.py view -rd -p
+python3 code/core.py view -rd
 
 # View Books Database
-python3 code/core.py view -bd -p
+python3 code/core.py view -bd
 ```
 
 #### Managing the Databases
