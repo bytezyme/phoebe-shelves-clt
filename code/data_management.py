@@ -399,7 +399,7 @@ def update_reading_time(start, finish):
     else:
         return((finish - start).days + 1)
 
-def update_reading_count(reading_db, db_directory, book_title):
+def update_reading_count(reading_db, books_db, book_title):
     """ Update reading count in books.csv from reading entries
 
     Inputs:
@@ -417,24 +417,10 @@ def update_reading_count(reading_db, db_directory, book_title):
 
     read_cnt = int(reading_db.loc[title_filter & finish_filter].shape[0])
 
-    # Update books.csv field
-    books_db_path = db_directory + '/books.csv'
-    books_db = pd.read_csv(books_db_path)
+    books_db.loc[books_db['Title'] == book_title, 'Times Read'] = read_cnt
+    return(books_db)
 
-    # Need to make sure the book is present, or create a new entry!
-    if book_title in books_db['Title'].values:
-        books_db.loc[books_db['Title'] == book_title, 'Times Read'] = read_cnt
-    else:
-        print('Cannot find {} in the books database.'.format(book_title))
-        print('Let\'s make a new entry...')
-        books_db = add_new_book(books_db, book_title)
-        books_db.loc[books_db['Title'] == book_title, 'Times Read'] = read_cnt
-
-    books_db = books_db.sort_values(by=['Author LN', 'Title'],
-                                    ignore_index = True)
-    books_db.to_csv(books_db_path, index=False)
-
-def update_book_rating(reading_db, db_directory, book_title):
+def update_book_rating(reading_db, books_db, book_title):
     """ Propogates average rating to the book database
 
     Inputs:
@@ -454,23 +440,29 @@ def update_book_rating(reading_db, db_directory, book_title):
     if pd.notna(avg_rating): # There is a rating
         avg_rating = round(avg_rating, 1)
 
-    # Update book db
-    books_db_path = db_directory + '/books.csv'
-    books_db = pd.read_csv(books_db_path)
+    books_db.loc[books_db['Title'] == book_title, 'Rating'] = avg_rating
+    return(books_db)
 
-    if book_title in books_db['Title'].values:
-        books_db.loc[books_db['Title'] == book_title, 'Rating'] = avg_rating
-    else:
+def propogate_to_book_db(reading_db, dir_path, book_title, mode):
+    books_db_path = dir_path + '/books.csv'
+    books_db = pd.read_csv(books_db_path)
+    book_exists = book_title in books_db['Title'].values
+
+    if book_exists:
+        books_db = update_reading_count(reading_db, books_db, book_title)
+        books_db = update_book_rating(reading_db, books_db, book_title)
+        books_db.to_csv(books_db_path, index=False)
+    elif mode == 'remove' and not book_exists:
+        print('Book doesn\'t exist in the books directory. No updates needed')
+    else: 
         print('Cannot find {} in the books database.'.format(book_title))
         print('Let\'s make a new entry...')
         books_db = add_new_book(books_db, book_title)
-        books_db.loc[books_db['Title'] == book_title, 'Rating'] = avg_rating
-    
-    books_db = books_db.sort_values(by=['Author LN', 'Title'],
-                                    ignore_index = True)
-    books_db.to_csv(books_db_path, index=False)
+        books_db = update_reading_count(reading_db, books_db, book_title)
+        books_db = update_book_rating(reading_db, books_db, book_title)
+        books_db.to_csv(books_db_path, index=False)
 
-def add_reading_entry(reading_db, book_title):
+def add_reading_entry(reading_db, dir_path, book_title):
     """ Adds a new reading entry for a book
     
     Inputs:
@@ -505,9 +497,12 @@ def add_reading_entry(reading_db, book_title):
     # Update reading database
     reading_db = reading_db.append(new_entry_dict, ignore_index = True)
 
+    # Propogate updates to books database
+    propogate_to_book_db(reading_db, dir_path, book_title, 'add')
+
     return(reading_db)
 
-def edit_reading_entry(reading_db, book_title):
+def edit_reading_entry(reading_db, dir_path, book_title):
     """ Edits properties of an existing reading entry
     
     Inputs:
@@ -555,9 +550,27 @@ def edit_reading_entry(reading_db, book_title):
                                    reading_db.loc[index_to_edit, 'Finish'])
     reading_db.loc[index_to_edit, 'Reading Time'] = new_time
 
+    # Propogate changes to books database
+    propogate_to_book_db(reading_db, dir_path, book_title, 'edit')
+    # books_db_path = dir_path + '/books.csv'
+    # books_db = pd.read_csv(books_db_path)
+
+    # # Create new book if doesn't already exist
+    # if book_title not in books_db['Title'].values:
+    #     print('Cannot find {} in the books database.'.format(book_title))
+    #     print('Let\'s make a new entry...')
+    #     books_db = add_new_book(books_db, book_title)
+    
+    # # Propogate updates into memory
+    # books_db = update_reading_count(reading_db, books_db, book_title)
+    # books_db = update_book_rating(reading_db, books_db, book_title)
+
+    # # Save to Disk
+    # books_db.to_csv(books_db_path, index=False)
+
     return(reading_db)
 
-def remove_reading_entry(reading_db, book_title):
+def remove_reading_entry(reading_db, dir_path, book_title):
     """ Removes a reading entry
     
     Inputs:
@@ -574,10 +587,24 @@ def remove_reading_entry(reading_db, book_title):
     remove_prompt = 'Which entry (index) would you like to remove?: '
     remove_options = filtered_db.index
     index_to_remove = prompt_for_options(remove_prompt, remove_options)
+    reading_db = reading_db.drop(index_to_remove)
 
-    return(reading_db.drop(index_to_remove))
+    # Propogation to book database
+    propogate_to_book_db(reading_db, dir_path, book_title, 'edit')
+    # books_db_path = dir_path + '/books.csv'
+    # books_db = pd.read_csv(books_db_path)
 
-def update_reading_db(db_directory):
+    # # Create new book if doesn't already exist
+    # if book_title in books_db['Title'].values:
+    #     books_db = update_reading_count(reading_db, books_db, book_title)
+    #     books_db = update_book_rating(reading_db, books_db, book_title)
+
+    # # Save to Disk
+    # books_db.to_csv(books_db_path, index=False)
+
+    return(reading_db)
+
+def update_reading_db(dir_path):
     """ Main function to update book database
 
     Inputs:
@@ -588,24 +615,24 @@ def update_reading_db(db_directory):
     """
 
 
-    # Read in the datbase
-    db_path = db_directory + '/' + 'reading.csv'
-    reading_db = pd.read_csv(db_path)
+    # Read in reading database
+    reading_db_path = dir_path + '/reading.csv'
+    reading_db = pd.read_csv(reading_db_path)
 
     # Requires additional formatting for dates
     reading_db['Start'] = pd.to_datetime(reading_db['Start']).dt.date
     reading_db['Finish'] = pd.to_datetime(reading_db['Finish']).dt.date
 
     # Print full database for ease of viewing
-    print_db(db_path)
+    print_db(reading_db_path)
 
     update_mode = select_mode()
 
-    book_title = prompt_for_title(reading_db, update_mode)
+    title = prompt_for_title(reading_db, update_mode)
 
     if update_mode == 1:
-        if book_title in reading_db['Title'].values:
-            print('An entry for {} already exists.'.format(book_title))
+        if title in reading_db['Title'].values:
+            print('An entry for {} already exists.'.format(title))
             switch_prompt = 'Would you like to edit an entry instead [Y/N]?: '
             switch_to_edit = input(switch_prompt)
 
@@ -614,18 +641,20 @@ def update_reading_db(db_directory):
                 switch_to_edit = input('Please choose [Y/N]: ')
 
             if switch_to_edit in {'Y', 'y'}:
-                reading_rb = edit_reading_entry(reading_db, book_title)
+                reading_rb = edit_reading_entry(reading_db, dir_path, title)
             elif switch_to_edit in {'N', 'n'}:
-                reading_db = add_reading_entry(reading_db, book_title)
+                reading_db = add_reading_entry(reading_db, dir_path, title)
         else:
-            reading_db = add_reading_entry(reading_db, book_title)
+            reading_db = add_reading_entry(reading_db, dir_path, title)
     elif update_mode == 2:
-        reading_db = edit_reading_entry(reading_db, book_title)
+        reading_db = edit_reading_entry(reading_db, dir_path, title)
     else:
-        reading_db = remove_reading_entry(reading_db, book_title)
+        reading_db = remove_reading_entry(reading_db, dir_path, title)
 
-    update_reading_count(reading_db, db_directory, book_title)
-    update_book_rating(reading_db, db_directory, book_title)
+    # TODO: Don't need to run if remove *and* it doesn't exist
+    # update_reading_count(reading_db, dir_path, title)
+    # update_book_rating(reading_db, dir_path, title)
+
     reading_db.sort_values(['Finish', 'Start'], na_position='last',
                            inplace=True)
-    reading_db.to_csv(db_path, index=False)
+    reading_db.to_csv(reading_db_path, index=False)
