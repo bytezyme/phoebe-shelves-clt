@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 import os
 import configparser
+
 from data_management import create_databases, update_book_db, update_reading_db
 from data_view import print_db
 

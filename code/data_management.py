@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import dateutil
 
 from data_view import print_db, print_filtered_db
 
@@ -12,14 +13,14 @@ def select_mode():
     Outputs:
         update_mode {int} -- Indicates which of 3 update modes was selected
     """
-    update_mode = int(input('Do you want to [1] add a new entry, [2] edit a '
-                            'current entry, or [3] remove an entry?: '))
+    update_mode = input('Do you want to [1] add a new entry, [2] edit a '
+                        'current entry, or [3] remove an entry?: ')
 
-    while update_mode not in [1,2,3]:
+    while update_mode not in {'1','2','3'}:
         print('{} is not a valid option'.format(update_mode))
-        update_mode = int(input('Please select [1] add a new entry, [2] edit '
-                                'a current entry, or [3] remove an entry?: '))
-    return(update_mode)
+        update_mode = input('Please select [1] add a new entry, [2] edit '
+                            'a current entry, or [3] remove an entry?: ')
+    return(int(update_mode))
 
 def prompt_for_title(db, update_mode):
     """ Request user to enter an acceptable book title
@@ -63,45 +64,50 @@ def prompt_for_property(prop_dict):
     prop_edit_prompt = '\n'.join(prop_edit_prompt)
 
     # Request Prompt
+
+    # TODO: Have a catch for restrict to only acceptable properties!
     prop_to_update = int(input(prop_edit_prompt + '\n'))
     prop_to_update = prop_dict[prop_to_update]
 
     # Get new value
-    new_value = input('What is the new {} value: '.format(prop_to_update))
+    new_value = input('What is the new {} value?: '.format(prop_to_update))
     return((new_value, prop_to_update))
+
+def prompt_for_date(property_name):
+    date = ''
+
+    while True:
+        try:
+            date = pd.to_datetime(input('{}: '.format(property_name))).date()
+        except dateutil.parser._parser.ParserError:
+            print('Cannot parse the input to a date. Please try again.')
+            continue
+        break
+
+    return(date)
 
 ### Database Creation
 
-def create_books_db(db_path):
-    """ Create an empty books database
+def create_database(db_path):
+    """ Create the appropriate database at the given path
 
     Inputs:
-        db_path {string} -- Path to save the database file to
-
+        db_path {string} -- Indicates which database and its path
+    
     Outputs:
-        Saves an empty DataFrame with columns to disk
-        Prints confirmation to the terminal
+        Saves an empty version of the appropriate database at db_path
     """
 
-    book_db_cols = ['Title', 'Author', 'Author FN', 'Author MN',
+    if 'books.csv' in db_path:
+        cols = ['Title', 'Author', 'Author FN', 'Author MN',
                     'Author LN', 'Length', 'Times Read', 'Rating', 'Genre']
-    pd.DataFrame(columns=book_db_cols).to_csv(db_path, index=False)
-    print('Successfully created book database.')
+        name = 'books'
+    else:
+        cols = ['Title', 'Start', 'Finish', 'Reading Time', 'Rating']
+        name = 'reading'
 
-def create_reading_db(db_path):
-    """ Create an empty reading database
-
-    Inputs:
-        db_path {string} -- Path to save the database file to
-
-    Outputs:
-        Saves an empty DataFrame with columns to disk
-        Prints confirmation to the terminal
-    """
-
-    book_db_cols = ['Title', 'Start', 'Finish', 'Reading Time', 'Rating']
-    pd.DataFrame(columns=book_db_cols).to_csv(db_path, index=False)
-    print('Successfully created reading event database.')
+    pd.DataFrame(columns=cols).to_csv(db_path, index=False)
+    print('Successfully created the {} database!'.format(name))
 
 def create_databases(force_overwrite, data_directory):
     """ Creates initial book and reading date csv files if not present
@@ -116,22 +122,23 @@ def create_databases(force_overwrite, data_directory):
     """
 
     print('Checking for data...')
-    books_db_path = data_directory + '/' + 'books.csv'
-    reading_db_path = data_directory + '/' + 'reading.csv'
+    books_db_path = data_directory + '/books.csv'
+    reading_db_path = data_directory + '/reading.csv'
 
     books_db_exists = os.path.isfile(books_db_path)
     reading_db_exists = os.path.isfile(reading_db_path)
 
     # Check for books.csv
+
     if books_db_exists and not force_overwrite:
         print('Book database already created. '
               'Pass -f to force overwrite the current database.')
     elif books_db_exists and force_overwrite:
         print('Overwriting existing books database...')
-        create_books_db(books_db_path)
+        create_database(books_db_path)
     else:
         print('Creating book database...')
-        create_books_db(books_db_path)
+        create_database(books_db_path)
 
     # Check for reading.csv
     if reading_db_exists and not force_overwrite:
@@ -139,10 +146,10 @@ def create_databases(force_overwrite, data_directory):
               'Pass -f to force overwrite the current database.')
     elif reading_db_exists and force_overwrite:
         print('Overwriting reading database...')
-        create_reading_db(reading_db_path)
+        create_database(reading_db_path)
     else:
         print('Creating reading database...')
-        create_reading_db(reading_db_path)
+        create_database(reading_db_path)
 
 ### Book Database Updates
 
@@ -158,7 +165,7 @@ def generate_full_author(author_fn, author_mn, author_ln):
         author {string} -- Combined author name (First, Middle, Last)
     """
 
-    if author_mn == '' or np.isnan(author_mn):
+    if author_mn == '':
         author = ' '.join([author_fn, author_ln])
     else:
         author = ' '.join([author_fn, author_mn, author_ln])
@@ -215,18 +222,15 @@ def add_new_book(books_db, book_title):
     print('Please enter the following optional information:')
 
     author_fn, author_mn, author_ln = prompt_for_author(books_db)
+    author = generate_full_author(author_fn, author_mn, author_ln)
 
     new_book = {'Title': book_title,
                 'Author FN': author_fn,
                 'Author MN': author_mn,
                 'Author LN': author_ln,
+                'Author': author,
                 'Length': input('Book Length (Pages): '),
-                'Rating': input('Rating (1-5): '),
                 'Genre': input('Book Genre: ')}
-
-    new_book['Author'] = generate_full_author(new_book['Author FN'],
-                                              new_book['Author MN'],
-                                              new_book['Author LN'])
 
     # Append to database in memory
     return(books_db.append(new_book, ignore_index=True))
@@ -319,10 +323,13 @@ def update_book_db(db_directory):
         if book_title in books_db['Title'].values:
             print('{} already exists in the database.'.format(book_title))
 
-            switch_mode = int(input('Would you like to [1] edit the existing '
-                                    'entry or [2] overwrite the data: '))
+            switch_mode = input('Would you like to [1] edit the existing '
+                                'entry or [2] overwrite the data: ')
             
-            if switch_mode == 1:
+            while switch_mode not in {'1', '2'}:
+                switch_mode = input('Please choose [1] or [2]: ')
+
+            if int(switch_mode) == 1:
                 books_db = edit_existing_book(books_db, book_title)
             else:
                 books_db.drop(books_db[books_db['Title'] == book_title].index,
@@ -442,9 +449,14 @@ def add_reading_entry(reading_db, book_title):
     print('Please enter the following optional information for a new entry:')
 
     # Get optional information
-    start_date = pd.to_datetime(input('Start Date: ')).date()
-    finish_date = pd.to_datetime(input('End Date: ')).date()
+
+    start_date = prompt_for_date('Start Date')
+    finish_date = prompt_for_date('End Date')
     rating = input('Rating (1-5): ')
+
+    while rating not in {'', '1', '2', '3', '4', '5'}:
+        rating = input('Choose an integer between 1 and 5 or leave blank')
+
     rating = int(rating) if rating != '' else np.nan # Format rating
 
     # Create temporary entry object
@@ -476,9 +488,10 @@ def edit_reading_entry(reading_db, book_title):
 
     index_to_edit = int(input('Which entry (index) would you like to edit?: '))
 
-    print('Which property would you like to edit?')
+    # TODO: Add catch for an unacceptable input (leave as string and make sure
+    # TODO: it correponds to an exisiting index)
 
-    # TODO: Have a way to catch unacceptable inputs
+    print('Which property would you like to edit?')
 
     prop_dict = {1: 'Title',
                  2: 'Start',
@@ -490,7 +503,14 @@ def edit_reading_entry(reading_db, book_title):
 
     # Correctly format the information
     if prop_to_update == 'Start' or prop_to_update == 'Finish':
-        new_value = pd.to_datetime(new_value).date()
+        while True:
+            try:
+                new_value = pd.to_datetime(new_value).date()
+            except dateutil.parser._parser.ParserError:
+                print('Cannot parse the input to a date. Please try again.')
+                new_value = input('What is the new date?: '.format(prop_to_update))
+                continue
+            break
     elif prop_to_update == 'Rating':
         new_value = int(new_value) if new_value != '' else np.nan
 
@@ -541,38 +561,33 @@ def update_reading_db(db_directory):
     # Print full database for ease of viewing
     print_db(db_path)
 
-    update_mode = int(input('Do you want to [1] add a new entry, [2] edit a '
-                            'current entry, or [3] remove an entry?: '))
+    update_mode = select_mode()
 
     book_title = prompt_for_title(reading_db, update_mode)
 
     if update_mode == 1:
         if book_title in reading_db['Title'].values:
             print('An entry for {} already exists.'.format(book_title))
-            switch_to_edit = input('Would you like to edit an entry instead '
-                                   '[Y/N]?: ')
-            if switch_to_edit in ['Y', 'y']:
+            switch_prompt = 'Would you like to edit an entry instead [Y/N]?: '
+            switch_to_edit = input(switch_prompt)
+
+            # First restrict to acceptable inputs
+            while switch_to_edit not in {'Y', 'y', 'N', 'n'}:
+                switch_to_edit = input('Please choose [Y/N]: ')
+
+            if switch_to_edit in {'Y', 'y'}:
                 reading_rb = edit_reading_entry(reading_db, book_title)
-                update_reading_count(reading_db, db_directory, book_title)
-                update_book_rating(reading_db, db_directory, book_title)
-            else:
+            elif switch_to_edit in {'N', 'n'}:
                 reading_db = add_reading_entry(reading_db, book_title)
-                update_reading_count(reading_db, db_directory, book_title)
-                update_book_rating(reading_db, db_directory, book_title)
         else:
             reading_db = add_reading_entry(reading_db, book_title)
-            update_reading_count(reading_db, db_directory, book_title)
-            update_book_rating(reading_db, db_directory, book_title)
-
     elif update_mode == 2:
         reading_db = edit_reading_entry(reading_db, book_title)
-        update_reading_count(reading_db, db_directory, book_title)
-        update_book_rating(reading_db, db_directory, book_title)
     else:
         reading_db = remove_reading_entry(reading_db, book_title)
-        update_reading_count(reading_db, db_directory, book_title)
-        update_book_rating(reading_db, db_directory, book_title)
 
+    update_reading_count(reading_db, db_directory, book_title)
+    update_book_rating(reading_db, db_directory, book_title)
     reading_db.sort_values(['Finish', 'Start'], na_position='last',
                            inplace=True)
     reading_db.to_csv(db_path, index=False)
