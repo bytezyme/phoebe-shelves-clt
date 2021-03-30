@@ -15,7 +15,7 @@ def print_db(db_path):
     else: 
         db = pd.read_csv(db_path)
 
-    print('\n', db.to_markdown(tablefmt='grid', index=False), '\n')
+    print('\n' + db.to_markdown(tablefmt='grid', index=False) + '\n')
 
 def print_filtered_db(db, book_title):
     """ Prints a filtered database to only include entries for a certain book
@@ -30,4 +30,4 @@ def print_filtered_db(db, book_title):
 
 
     filtered_db = db[db['Title'] == book_title]
-    print('\n', filtered_db.to_markdown(tablefmt='grid'), '\n')
+    print('\n' + filtered_db.to_markdown(tablefmt='grid') + '\n')
