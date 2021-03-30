@@ -7,20 +7,34 @@ from data_view import print_db, print_filtered_db
 
 ### Common Functions
 
+def prompt_for_options(input_prompt, valid_options):
+    """ Function to prompt and validate user input for enumerated options
+
+    This function provides the general structure for prompting a user to
+    select from a set of enumerated options using the input() method. This
+    ensures the input is 1) a valid integer and 2) within the presented list
+    of options
+
+    """
+    while True:
+        try:
+            selection = int(input(input_prompt))
+            if selection not in valid_options:
+                raise ValueError
+            return(selection)
+        except ValueError:
+            print('Please enter one of the valid options.\n')
+
 def select_mode():
     """ Requests user to select an update mode
 
     Outputs:
         update_mode {int} -- Indicates which of 3 update modes was selected
     """
-    update_mode = input('Do you want to [1] add a new entry, [2] edit a '
-                        'current entry, or [3] remove an entry?: ')
-
-    while update_mode not in {'1','2','3'}:
-        print('{} is not a valid option'.format(update_mode))
-        update_mode = input('Please select [1] add a new entry, [2] edit '
-                            'a current entry, or [3] remove an entry?: ')
-    return(int(update_mode))
+    input_prompt = ('Do you want to [1] add a new entry, [2] edit a current '
+                    'entry, or [3] remove an entry?: ')
+    valid_options = {1,2,3}
+    return(prompt_for_options(input_prompt, valid_options))
 
 def prompt_for_title(db, update_mode):
     """ Request user to enter an acceptable book title
@@ -58,15 +72,18 @@ def prompt_for_property(prop_dict):
     mode enable the user to change a title to something not present
 
     """
-    prop_edit_prompt = ['[{}] {}'.format(key, value)
-                        for key,value
-                        in prop_dict.items()]
-    prop_edit_prompt = '\n'.join(prop_edit_prompt)
 
     # Request Prompt
+    prop_update_prompt = ['[{}] {}'.format(key, value)
+                          for key,value
+                          in prop_dict.items()]
+    prop_update_prompt = '\n'.join(prop_update_prompt) + '\nSelection: '
 
-    # TODO: Have a catch for restrict to only acceptable properties!
-    prop_to_update = int(input(prop_edit_prompt + '\n'))
+    # Ensure request is a valid property choice
+
+    prop_to_update = prompt_for_options(prop_update_prompt,
+                                        set(prop_dict.keys()))
+
     prop_to_update = prop_dict[prop_to_update]
 
     # Get new value
@@ -184,23 +201,27 @@ def prompt_for_author(books_db):
         author_mn = input('Author Middle Name (Optional): ')
     else:
         # Allow user to select from existing list or indicate new author
-        print('The author may already exist in the database. Select on of the '
-            'following options to autofill or the last option to add'
+        print('The author may already exist. Select one of the following '
+            'options to select an existing author or the last option to add '
             'a new author.')
         prompt_strings = ['[{}] {}'.format(option + 1, name)
                         for option, name
                         in enumerate(author_list)]
         new_author_index = len(author_list) + 1 # Last index for prompt
         prompt_strings.append('[{}] New Author'.format(new_author_index))
-        author_selection = int(input('\n'.join(prompt_strings) + '\n'))
+        select_prompt = '\n'.join(prompt_strings) + '\nSelection: '
+        author_options = set(range(1, new_author_index+1))
+
+        # Only accept a correct answer
+        author_select = prompt_for_options(select_prompt, author_options)
 
         # Two cases: select new author or not:
-        if author_selection == new_author_index:
+        if author_select == new_author_index:
             print('Provide the following information for a new author.')
             author_fn = input('Author First Name: ')
             author_mn = input('Author Middle Name (Optional): ')
         else:
-            author_filter = books_db['Author'] == author_list[author_selection - 1]
+            author_filter = books_db['Author'] == author_list[author_select-1]
             author_index = books_db[author_filter].index[0] # Only need the first index
             author_fn = books_db.loc[author_index, 'Author FN']
             author_mn = books_db.loc[author_index, 'Author MN']
@@ -224,13 +245,28 @@ def add_new_book(books_db, book_title):
     author_fn, author_mn, author_ln = prompt_for_author(books_db)
     author = generate_full_author(author_fn, author_mn, author_ln)
 
+    while True:
+        book_length = input('Book Length (Pages): ')
+
+        if book_length == '':
+            break
+        else:
+            try:
+                book_length = int(book_length)
+                break
+            except ValueError:
+                print('Please leave blank or enter an integer.\n')
+
+    book_genre = input('Book Genre: ')
+    
+
     new_book = {'Title': book_title,
                 'Author FN': author_fn,
                 'Author MN': author_mn,
                 'Author LN': author_ln,
                 'Author': author,
-                'Length': input('Book Length (Pages): '),
-                'Genre': input('Book Genre: ')}
+                'Length': book_length,
+                'Genre': book_genre}
 
     # Append to database in memory
     return(books_db.append(new_book, ignore_index=True))
@@ -322,12 +358,10 @@ def update_book_db(db_directory):
         # Need to check case where book actually already exists
         if book_title in books_db['Title'].values:
             print('{} already exists in the database.'.format(book_title))
-
-            switch_mode = input('Would you like to [1] edit the existing '
-                                'entry or [2] overwrite the data: ')
-            
-            while switch_mode not in {'1', '2'}:
-                switch_mode = input('Please choose [1] or [2]: ')
+            mode_prompt = ('Would you like to [1] edit the existing entry '
+                           'or [2] overwrite the data?: ') 
+            mode_options = {1,2}
+            switch_mode = prompt_for_options(mode_prompt, mode_options)
 
             if int(switch_mode) == 1:
                 books_db = edit_existing_book(books_db, book_title)
@@ -380,6 +414,7 @@ def update_reading_count(reading_db, db_directory, book_title):
     # Calculate read count
     title_filter = reading_db['Title'] == book_title
     finish_filter = reading_db['Finish'].notna()
+
     read_cnt = int(reading_db.loc[title_filter & finish_filter].shape[0])
 
     # Update books.csv field
@@ -455,8 +490,7 @@ def add_reading_entry(reading_db, book_title):
     rating = input('Rating (1-5): ')
 
     while rating not in {'', '1', '2', '3', '4', '5'}:
-        rating = input('Choose an integer between 1 and 5 or leave blank')
-
+        rating = input('Choose an integer between 1 and 5 or leave blank: ')
     rating = int(rating) if rating != '' else np.nan # Format rating
 
     # Create temporary entry object
@@ -484,12 +518,12 @@ def edit_reading_entry(reading_db, book_title):
         reading_db {DataFrame} -- DataFrame with updated entriy
     """
 
+    filtered_db = reading_db[reading_db['Title'] == book_title]
     print_filtered_db(reading_db, book_title)
 
-    index_to_edit = int(input('Which entry (index) would you like to edit?: '))
-
-    # TODO: Add catch for an unacceptable input (leave as string and make sure
-    # TODO: it correponds to an exisiting index)
+    edit_prompt = 'Which entry (index) would you like to edit?: '
+    edit_options = filtered_db.index
+    index_to_edit = prompt_for_options(edit_prompt, edit_options)
 
     print('Which property would you like to edit?')
 
@@ -534,9 +568,13 @@ def remove_reading_entry(reading_db, book_title):
         reading_db {DataFrame} -- DataFrame with removed entry
     """
 
+    filtered_db = reading_db[reading_db['Title'] == book_title]
     print_filtered_db(reading_db, book_title)
-    index_to_remove = int(input('Which entry (index) would '
-                                'you like to remove?: '))
+
+    remove_prompt = 'Which entry (index) would you like to remove?: '
+    remove_options = filtered_db.index
+    index_to_remove = prompt_for_options(remove_prompt, remove_options)
+
     return(reading_db.drop(index_to_remove))
 
 def update_reading_db(db_directory):
