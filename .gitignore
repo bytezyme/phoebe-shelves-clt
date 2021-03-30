@@ -6,4 +6,4 @@ __pycache__
 # Custom/user Files
 data/books.csv
 data/reading.csv
-configs.conf
+setup.cfg

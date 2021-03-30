@@ -7,7 +7,7 @@ from data_management import create_databases, update_book_db, update_reading_db
 from data_view import print_db
 
 # General Use Constants
-config_path = "owl-shelves-clt/configs.conf"
+config_path = "setup.cfg"
 
 def read_configs():
     """ Read in configurations from the config file
