@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import pandas as pd
-import os
 import configparser
 
 from data_management import create_databases, update_book_db, update_reading_db
@@ -10,6 +8,7 @@ from data_view import print_db
 
 # General Use Constants
 config_path = "setup.cfg"
+
 
 def read_configs():
     """ Read in configurations from the config file
@@ -22,9 +21,10 @@ def read_configs():
     config.read(config_path)
     return(config)
 
+
 def write_configs(data_path):
     """ Write out configurations to the config file
-    
+
     # TODO: May need to make more general
 
     Inputs:
@@ -36,8 +36,9 @@ def write_configs(data_path):
 
     config = configparser.ConfigParser()
     config['PATHS'] = {'data_directory': data_path}
-    with open (config_path, 'w') as config_file:
+    with open(config_path, 'w') as config_file:
         config.write(config_file)
+
 
 def arg_parser():
     """ Parse command line arguments
@@ -52,19 +53,19 @@ def arg_parser():
                                                  'book/reading database')
     subparsers = parser.add_subparsers(help="Top-level commands",
                                        dest='mode')
-    
-    ## Initialization Parser
+
+    # Initialization Parser
     init_parser = subparsers.add_parser('init',
                                         help='Use to create new databases')
 
-    init_parser.add_argument('-p', '--path', 
+    init_parser.add_argument('-p', '--path',
                              help='Path to database directory')
 
     init_parser.add_argument('-f', '--force',
                              action='store_true',
                              help='Force overwrite an existing database')
 
-    ## Configuration Parser
+    # Configuration Parser
     config_parser = subparsers.add_parser('config',
                                           help='Update script configs, such '
                                                'as the data directory path')
@@ -72,26 +73,26 @@ def arg_parser():
     config_parser.add_argument('-d', '--directory',
                                help='Path to database directory')
 
-    ## Access Parser
+    # Access Parser
     view_parser = subparsers.add_parser('view',
                                         help='Visualize databases')
 
-    ### Initial Separation
+    # Initial Separation
     view_parser.add_argument('-bd', '--booksdb',
-                             action='store_true', 
+                             action='store_true',
                              help='Flag to indicate access to book database')
 
-    view_parser.add_argument('-rd', '--readingdb', 
+    view_parser.add_argument('-rd', '--readingdb',
                              action='store_true',
                              help='Flag to indicate access to the reading '
                                     'events database')
 
-    ### Actions
+    # Actions
     view_parser.add_argument('-p', '--print',
                              action='store_true',
                              help='Indicates to print the details')
 
-    ## Management Parser
+    # Management Parser
     management_parser = subparsers.add_parser('manage',
                                               help='Manage existing data')
 
@@ -108,7 +109,8 @@ def arg_parser():
 
     arguments = parser.parse_args()
     return(arguments)
-    
+
+
 def main():
     """ Main program
     """
@@ -121,7 +123,7 @@ def main():
 
         # Initialize the databases
         create_databases(args.force,
-                         read_configs().get('PATHS','data_directory'))
+                         read_configs().get('PATHS', 'data_directory'))
 
     elif args.mode == 'config':
         # User specifies update to data_directory
@@ -141,12 +143,13 @@ def main():
         # Run Default Action (Print table view)
         print_db(database_path)
 
-    elif args.mode =='manage':
-        if args.booksdb: 
+    elif args.mode == 'manage':
+        if args.booksdb:
             update_book_db(read_configs().get('PATHS', 'data_directory'))
         elif args.readingdb:
             update_reading_db(read_configs().get('PATHS', 'data_directory'))
-    
+
+
 if __name__ == '__main__':
     try:
         main()
