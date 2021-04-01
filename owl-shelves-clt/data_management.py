@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import dateutil
 
-from data_view import print_db, print_filtered_db
+from data_view import print_db, print_db_title
 
 """ Common Functions """
 
@@ -403,7 +403,7 @@ def update_book_db(db_directory):
     books_db = pd.read_csv(db_path)
 
     # Print database for easy access
-    print_db(db_path)
+    print_db(books_db, 'books')
 
     update_mode = select_mode()
     book_title = prompt_for_title(books_db, update_mode)
@@ -600,7 +600,7 @@ def edit_reading_entry(reading_db, dir_path, book_title):
     """
 
     filtered_db = reading_db[reading_db['Title'] == book_title]
-    print_filtered_db(reading_db, book_title)
+    print_db_title(reading_db, book_title)
 
     edit_prompt = 'Which entry (index) would you like to edit?: '
     edit_options = filtered_db.index
@@ -656,7 +656,7 @@ def remove_reading_entry(reading_db, dir_path, book_title):
     """
 
     filtered_db = reading_db[reading_db['Title'] == book_title]
-    print_filtered_db(reading_db, book_title)
+    print_db_title(reading_db, book_title)
 
     remove_prompt = 'Which entry (index) would you like to remove?: '
     remove_options = filtered_db.index
@@ -688,7 +688,7 @@ def update_reading_db(dir_path):
     reading_db['Finish'] = pd.to_datetime(reading_db['Finish']).dt.date
 
     # Print full database for ease of viewing
-    print_db(reading_db_path)
+    print_db(reading_db, 'reading')
 
     update_mode = select_mode()
 

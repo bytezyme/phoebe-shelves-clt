@@ -1,43 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
-import configparser
+from config_api import read_configs, update_configs
 
 from data_management import create_databases, update_book_db, update_reading_db
-from data_view import print_db
-
-# General Use Constants
-config_path = "setup.cfg"
-
-
-def read_configs():
-    """ Read in configurations from the config file
-
-    Outputs:
-        config {ConfigParser} -- Contains saved configurations for the program
-    """
-
-    config = configparser.ConfigParser()
-    config.read(config_path)
-    return(config)
-
-
-def write_configs(data_path):
-    """ Write out configurations to the config file
-
-    # TODO: May need to make more general
-
-    Inputs:
-        data_path {string} -- Locatin of the new data directory
-
-    Outputs:
-        Saves updated config file to the config_path
-    """
-
-    config = configparser.ConfigParser()
-    config['PATHS'] = {'data_directory': data_path}
-    with open(config_path, 'w') as config_file:
-        config.write(config_file)
+from data_view import view_module
 
 
 def arg_parser():
@@ -114,45 +81,44 @@ def arg_parser():
 def main():
     """ Main program
     """
+    config_path = 'setup.cfg'
     args = arg_parser()
+
     if args.mode == 'init':
 
         # Use the user-specified path if passed, otherwise use default
         if args.path:
-            write_configs(args.path)
+            updated_configs = {'PATHS': {'data_directory': args.path}}
+            update_configs(config_path, updated_configs)
 
         # Initialize the databases
-        create_databases(args.force,
-                         read_configs().get('PATHS', 'data_directory'))
+        configs = read_configs(config_path)
+        create_databases(args.force, configs.get('PATHS', 'data_directory'))
 
     elif args.mode == 'config':
         # User specifies update to data_directory
         if args.directory:
-            write_configs(args.directory)
+            updated_configs = {'PATHS': {'data_directory': args.directory}}
         else:
-            write_configs('data')
+            updated_configs = {'PATHS': {'data_directory': 'data'}}
+
+        update_configs(config_path, updated_configs)
 
     elif args.mode == 'view':
-        # Setup source database
-        database_path = read_configs().get('PATHS', 'data_directory') + '/'
-        if args.booksdb:
-            database_path += 'books.csv'
-        elif args.readingdb:
-            database_path += 'reading.csv'
-
-        # Run Default Action (Print table view)
-        print_db(database_path)
+        configs = read_configs(config_path)
+        view_module(args, configs.get('PATHS', 'data_directory'))
 
     elif args.mode == 'manage':
+        configs = read_configs(config_path)
         if args.booksdb:
-            update_book_db(read_configs().get('PATHS', 'data_directory'))
+            update_book_db(configs.get('PATHS', 'data_directory'))
         elif args.readingdb:
-            update_reading_db(read_configs().get('PATHS', 'data_directory'))
+            update_reading_db(configs.get('PATHS', 'data_directory'))
 
 
 if __name__ == '__main__':
     try:
         main()
-    except KeyboardInterrupt:
-        print("\nClosing...")
+    except (KeyboardInterrupt, EOFError):
+        print("\nClosing... No changes have been saved!")
         pass
