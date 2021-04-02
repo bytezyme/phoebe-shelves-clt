@@ -1,4 +1,4 @@
-"""Initializes empty databases in a given directory.
+"""Methods for initializing databases.
 
 This module provides functions for creating empty databases in the provided
 data directory.

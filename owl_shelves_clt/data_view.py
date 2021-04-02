@@ -1,3 +1,5 @@
+"""Utility methods for viewing, filtering, and aggregating database data."""
+
 import pandas as pd
 import numpy as np
 
@@ -76,13 +78,22 @@ def numerical_threshold_filter(db, col_select):
 
 
 def books_filter(db):
+    """Filter books database based on user input
+
+    Args:
+        db {DataFrame} -- Books database as a pandas DataFrame
+
+    Outputs:
+        db {DataFrame} -- Database filtered based on user-given thresholds
+    """
+
     cols = db.columns.drop(['Author FN', 'Author MN', 'Author LN'])
     cols_index = list(range(1, len(cols) + 1))
     cols_dict = dict(zip(cols_index, cols))
     col_select = prompt_from_enum_dict(cols_dict)
 
     numeric_cols = {'Length', 'Times Read', 'Rating'}
-    
+
     # Categorical, so get unique values and select from them
     if col_select not in numeric_cols:
         print('Choose the option from the list below: \n')
@@ -93,7 +104,7 @@ def books_filter(db):
             values = temp_df['Author'].unique()
         else:
             values = db[col_select].sort_values().unique()
-        
+
         values_index = list(range(1, len(values) + 1))
         values_dict = dict(zip(values_index, values))
         values_select = prompt_from_enum_dict(values_dict)
@@ -108,11 +119,20 @@ def books_filter(db):
 
 
 def reading_filter(db):
+    """Filter readingdatabase based on user input
+
+    Args:
+        db {DataFrame} -- Reading database as a pandas DataFrame
+
+    Outputs:
+        db {DataFrame} -- Database filtered based on user-given thresholds
+    """
+
     cols = db.columns
     cols_index = list(range(1, len(cols) + 1))
     cols_dict = dict(zip(cols_index, cols))
     col_select = prompt_from_enum_dict(cols_dict)
-    
+
     # Categorical, so get unique values and select from them
     if col_select in {'Title'}:
         print('Choose the option from the list below: \n')
@@ -130,6 +150,16 @@ def reading_filter(db):
 
 
 def view_module(args, dir_path):
+    """Top-level flow to view databases
+
+    Args:
+        args {Argparser} -- Command line arguments
+        dir_path {string} -- Path to database directory
+
+    Outputs:
+        1. Prints a database as a table view to the command line
+        2. Prints database aggregate data to the command line
+    """
 
     # TODO: Have 1) walkthrough with no options or 2) direct with
     # TODO: Passed options

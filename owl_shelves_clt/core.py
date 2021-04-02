@@ -80,8 +80,7 @@ def arg_parser():
 
 
 def main():
-    """ Main program
-    """
+    """Main program"""
     config_path = 'setup.cfg'
     args = arg_parser()
 

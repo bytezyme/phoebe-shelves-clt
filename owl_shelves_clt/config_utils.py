@@ -13,7 +13,7 @@ def read_configs(config_path):
     Args:
         config_path {string} -- Path to configuration file location
 
-    Returns:
+    Outputs:
         configs {configparser} -- Configurations
     """
 
@@ -29,7 +29,7 @@ def update_configs(config_path, update_dict):
         config_path {string} -- Path to configuration file location
         update_dict {dict} -- Dict containing updates in correct format
 
-    Returns:
+    Outputs:
         Saves the updated configuration file to the specified location
     """
 

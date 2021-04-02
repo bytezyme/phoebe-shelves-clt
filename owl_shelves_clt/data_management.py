@@ -1,3 +1,5 @@
+"""Utility functions for updating database entries"""
+
 import pandas as pd
 import numpy as np
 
@@ -32,7 +34,7 @@ def prompt_for_title(db, update_mode):
     already exists in a database. This is a specialized case because editing or
     removing a title requires it to already be present.
 
-    Inputs:
+    Args:
         db {DataFrame} -- DataFrame of books or reading entries
         update_mode {Int} -- [1] Add, [2] Edit, or [3] Remove
 
@@ -52,13 +54,13 @@ def prompt_for_title(db, update_mode):
 
 
 def prompt_for_property(prop_dict):
-    """ Consolidate general property prompt
+    """Consolidate general property prompt
 
     Requests user to select a property from the database to edit and the
     corresponding new value. The "title" is treated differently because edit
     mode enable the user to change a title to something not present
 
-    Inputs:
+    Args:
         prop_dict {dict} -- Dictioanry mapping acceptable user inputs to a prop
 
     Outputs:
@@ -80,6 +82,14 @@ def prompt_for_property(prop_dict):
 
 
 def prompt_for_rating(prompt):
+    """Prompt user for an integer rating (max 5)
+
+    Args:
+        prompt {string} -- Prompt that user sees on the command line
+
+    Outputs:
+        rating {int} -- Intger rating or np.nan if empty string is passed
+    """
 
     rating = input(prompt)
 
@@ -92,7 +102,7 @@ def prompt_for_rating(prompt):
 
 
 def prompt_for_author(books_db):
-    """ Prompt the user for author name details
+    """Prompt the user for author name details
 
     This function will prompt the user for details to fill out the full
     author name. It provides logic for searching the existing list of authors
@@ -101,7 +111,7 @@ def prompt_for_author(books_db):
     Inputs:
         books_db {Dataframe} -- Dataframe of exisiting books
 
-    Returns:
+    Outputs:
         author_fn {string} -- Author's first name
         author_mn {string} -- Author's middle name
         author_ln {string} -- Author's last name
@@ -147,14 +157,14 @@ def prompt_for_author(books_db):
 
 
 def generate_full_author(author_fn, author_mn, author_ln):
-    """ Combines author names into a single column
+    """Combines author names into a single column
 
-    Inputs:
+    Args:
         author_fn {string} -- Author first name
         author_mn {string} -- Author middle name
         author_ln {string} -- Author last name
 
-    Outputs
+    Outputs:
         author {string} -- Combined author name (First, Middle, Last)
     """
 
@@ -164,9 +174,9 @@ def generate_full_author(author_fn, author_mn, author_ln):
 
 
 def add_new_book(books_db, book_title):
-    """ Adds a new book to the book database
+    """Adds a new book to the book database
 
-    Inputs:
+    Args:
         books_db {DataFrame} -- DataFrame representation of the books database
         book_title {string} -- Title of book to add to the database
 
@@ -207,9 +217,9 @@ def add_new_book(books_db, book_title):
 
 
 def edit_existing_book(books_db, book_title):
-    """ Edits an exisiting book in the database
+    """Edits an exisiting book in the database
 
-    Inputs:
+    Args:
         books_db {DataFrame} -- DataFrame representation of the books database
         book_title {string} -- Title of book to edit
 
@@ -258,9 +268,9 @@ def edit_existing_book(books_db, book_title):
 
 
 def remove_existing_book(books_db, book_title):
-    """ Removes an existing book from the database
+    """Removes an existing book from the database
 
-    Inputs:
+    Args:
         books_db {DataFrame} -- DataFrame representation of the books database
         book_title {string} -- Title of book to remove
 
@@ -272,9 +282,9 @@ def remove_existing_book(books_db, book_title):
 
 
 def update_book_db(db_directory):
-    """ Main function to update book database
+    """Main function to update book database
 
-    Inputs:
+    Args:
         db_directory {string} -- Path to the data directory
 
     Outputs:
@@ -321,13 +331,10 @@ def update_book_db(db_directory):
     books_db.to_csv(db_path, index=False)
 
 
-""" Reading database updates """
-
-
 def update_reading_time(start, finish):
-    """ Calculate reading time using start and finish dates
+    """Calculate reading time using start and finish dates
 
-    Inputs:
+    Args:
         start {datetime} -- Start date
         finish {datetime} -- Finish date
 
@@ -342,9 +349,9 @@ def update_reading_time(start, finish):
 
 
 def update_reading_count(reading_db, books_db, book_title):
-    """ Update reading count in books.csv from reading entries
+    """ pdate reading count in books.csv from reading entries
 
-    Inputs:
+    Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
         books_db {DataFrame} -- Pandas DataFrame of the books database
         book_title -- Title of book to use for the entry
@@ -364,9 +371,9 @@ def update_reading_count(reading_db, books_db, book_title):
 
 
 def update_book_rating(reading_db, books_db, book_title):
-    """ Propogates average rating to the book database
+    """Propogates average rating to the book database
 
-    Inputs:
+    Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
         books_db {DataFrame} -- Pandas DataFrame of the books database
         book_title -- Title of book to use for the entry
@@ -388,9 +395,9 @@ def update_book_rating(reading_db, books_db, book_title):
 
 
 def propogate_to_book_db(reading_db, dir_path, book_title, mode):
-    """ Propogate reading database updates to the books database
+    """Propogate reading database updates to the books database
 
-    Inputs:
+    Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
         dir_path {string} -- Path to directory containing the database csv's
         book_title {string} -- Book title
@@ -398,7 +405,6 @@ def propogate_to_book_db(reading_db, dir_path, book_title, mode):
 
     Outputs:
         Saves the updated books database as a csv to the dir_path
-
     """
 
     books_db_path = dir_path + '/books.csv'
@@ -413,7 +419,7 @@ def propogate_to_book_db(reading_db, dir_path, book_title, mode):
             print('Cannot find {} in the books database.'.format(book_title))
             print('Let\'s make a new entry...')
             books_db = add_new_book(books_db, book_title)
-        
+
         books_db = update_reading_count(reading_db, books_db, book_title)
         books_db = update_book_rating(reading_db, books_db, book_title)
         books_db = books_db.sort_values(by=['Author LN', 'Title'],
@@ -422,9 +428,9 @@ def propogate_to_book_db(reading_db, dir_path, book_title, mode):
 
 
 def add_reading_entry(reading_db, dir_path, book_title):
-    """ Adds a new reading entry for a book
+    """Adds a new reading entry for a book
 
-    Inputs:
+    Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
         dir_path {string} -- Path to directory containing the database csv's
         book_title {string} -- Title of book to use for the entry
@@ -460,9 +466,9 @@ def add_reading_entry(reading_db, dir_path, book_title):
 
 
 def edit_reading_entry(reading_db, dir_path, book_title):
-    """ Edits properties of an existing reading entry
+    """Edits properties of an existing reading entry
 
-    Inputs:
+    Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
         dir_path {string} -- Path to directory containing the database csv's
         book_title {string} -- Title of book to filter for the reading entry
@@ -503,9 +509,9 @@ def edit_reading_entry(reading_db, dir_path, book_title):
 
 
 def remove_reading_entry(reading_db, dir_path, book_title):
-    """ Removes a reading entry
+    """Removes a reading entry
 
-    Inputs:
+    Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
         dir_path {string} -- Path to directory containing the database csv's
         book_title {string} -- Title of book to filter for the reading entry
@@ -530,9 +536,9 @@ def remove_reading_entry(reading_db, dir_path, book_title):
 
 
 def update_reading_db(dir_path):
-    """ Main function to update book database
+    """Main function to update book database
 
-    Inputs:
+    Args:
         dir_path {string} -- Path to the data directory
 
     Outputs:
