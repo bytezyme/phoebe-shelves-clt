@@ -1,54 +1,30 @@
-import os
 import pandas as pd
 import numpy as np
-import dateutil
 
 from data_view import print_db, print_db_title
+
+from input_utils import prompt_from_enum_options, prompt_from_enum_dict
+from input_utils import prompt_for_yes, prompt_for_date
+from input_utils import gen_enum_dict_from_list
 
 """ Common Functions """
 
 
 def select_mode():
-    """ Requests user to select an update mode
+    """Requests user to select an update mode
 
     Outputs:
         update_mode {int} -- Indicates which of 3 update modes was selected
     """
 
-    input_prompt = ('Do you want to [1] add a new entry, [2] edit a current '
-                    'entry, or [3] remove an entry?: ')
-    valid_options = {1, 2, 3}
-    return(prompt_for_options(input_prompt, valid_options))
-
-
-def prompt_for_options(input_prompt, valid_options):
-    """ Function to prompt and validate user input for enumerated options
-
-    This function provides the general structure for prompting a user to
-    select from a set of enumerated options using the input() method. This
-    ensures the input is 1) a valid integer and 2) within the presented list
-    of options
-
-    Inputs:
-        input_prompt {string} -- Input prompt string
-        valid_options {set} -- Set of valid input options
-
-    Outputs:
-        selection {int} -- Selected option from user input
-    """
-
-    while True:
-        try:
-            selection = int(input(input_prompt))
-            if selection not in valid_options:
-                raise ValueError
-            return(selection)
-        except ValueError:
-            print('Please enter one of the valid options.\n')
+    prompt = ('Do you want to [1] add a new entry, [2] edit a current '
+              'entry, or [3] remove an entry?: ')
+    options = {1, 2, 3}
+    return(prompt_from_enum_options(prompt, options))
 
 
 def prompt_for_title(db, update_mode):
-    """ Request user to enter an acceptable book title
+    """Request user to enter an acceptable book title
 
     Adding a book can accept any potential title. There are custom actions to
     deal with cases for the books and reading databases defined in the
@@ -62,7 +38,6 @@ def prompt_for_title(db, update_mode):
 
     Outputs:
         book_title {string} -- Title of the book to use
-
     """
 
     book_title = book_title = input('Please enter the book title: ')
@@ -91,135 +66,29 @@ def prompt_for_property(prop_dict):
         prop_to_update {string} -- Name of the property to update
     """
 
-    # Request Prompt
-    prop_update_prompt = ['[{}] {}'.format(key, value)
-                          for key, value
-                          in prop_dict.items()]
-    prop_update_prompt = '\n'.join(prop_update_prompt) + '\nSelection: '
+    prop_to_update = prompt_from_enum_dict(prop_dict)
+    update_prompt = 'What is the new {} value?: '.format(prop_to_update)
 
-    # Ensure request is a valid property choice
-
-    prop_to_update = prompt_for_options(prop_update_prompt,
-                                        set(prop_dict.keys()))
-
-    prop_to_update = prop_dict[prop_to_update]
-
-    # Get new value
-    new_value = input('What is the new {} value?: '.format(prop_to_update))
-    return((new_value, prop_to_update))
-
-
-def prompt_for_date(property_name):
-    """ General date prompt with error catching
-
-    Inputs:
-        property_name {string} -- Name of the property to prompt for
-
-    Outputs:
-        date {Datetime} -- Datetime object with only the date
-    """
-
-    date = ''
-
-    while True:
-        try:
-            date = pd.to_datetime(input('{}: '.format(property_name))).date()
-        except dateutil.parser._parser.ParserError:
-            print('Cannot parse the input to a date. Please try again.')
-            continue
-        break
-
-    return(date)
-
-
-""" Database Creation """
-
-
-def create_database(db_path):
-    """ Create the appropriate database at the given path
-
-    Inputs:
-        db_path {string} -- Indicates which database and its path
-
-    Outputs:
-        Saves an empty version of the appropriate database at db_path
-    """
-
-    if 'books.csv' in db_path:
-        cols = ['Title', 'Author', 'Author FN', 'Author MN',
-                'Author LN', 'Length', 'Times Read', 'Rating', 'Genre']
-        name = 'books'
+    # Use date parser if 'Start' or 'Finish
+    if prop_to_update == 'Start' or prop_to_update == 'Finish':
+        new_val = prompt_for_date(update_prompt)
+    elif prop_to_update == 'Rating':
+        new_val = prompt_for_rating(update_prompt)
     else:
-        cols = ['Title', 'Start', 'Finish', 'Reading Time', 'Rating']
-        name = 'reading'
-
-    pd.DataFrame(columns=cols).to_csv(db_path, index=False)
-    print('Successfully created the {} database!'.format(name))
+        new_val = input(update_prompt)
+    return((new_val, prop_to_update))
 
 
-def create_databases(force_overwrite, data_directory):
-    """ Creates initial book and reading date csv files if not present
+def prompt_for_rating(prompt):
 
-    Inputs:
-        force_overwrite {bool} -- Indicates to overwrite existing databases
-        data_directory {string} -- Path to the data directory
+    rating = input(prompt)
 
-    Outputs:
-        Prints out status of the process
-        Writes empty reading and book databases to the data_directory
-    """
+    while rating not in {'', '1', '2', '3', '4', '5'}:
+        rating = input('Choose an integer between 1 and 5 or leave blank: ')
 
-    print('Checking for data...')
-    books_db_path = data_directory + '/books.csv'
-    reading_db_path = data_directory + '/reading.csv'
-
-    books_db_exists = os.path.isfile(books_db_path)
-    reading_db_exists = os.path.isfile(reading_db_path)
-
-    # Check for books.csv
-
-    if books_db_exists and not force_overwrite:
-        print('Book database already created. '
-              'Pass -f to force overwrite the current database.')
-    elif books_db_exists and force_overwrite:
-        print('Overwriting existing books database...')
-        create_database(books_db_path)
-    else:
-        print('Creating book database...')
-        create_database(books_db_path)
-
-    # Check for reading.csv
-    if reading_db_exists and not force_overwrite:
-        print('Reading event database already created. '
-              'Pass -f to force overwrite the current database.')
-    elif reading_db_exists and force_overwrite:
-        print('Overwriting reading database...')
-        create_database(reading_db_path)
-    else:
-        print('Creating reading database...')
-        create_database(reading_db_path)
-
-
-""" Books database updates """
-
-
-def generate_full_author(author_fn, author_mn, author_ln):
-    """ Combines author names into a single column
-
-    Inputs:
-        author_fn {string} -- Author first name
-        author_mn {string} -- Author middle name
-        author_ln {string} -- Author last name
-
-    Outputs
-        author {string} -- Combined author name (First, Middle, Last)
-    """
-
-    if author_mn == '':
-        author = ' '.join([author_fn, author_ln])
-    else:
-        author = ' '.join([author_fn, author_mn, author_ln])
-    return(author)
+    # Format rating
+    rating = int(rating) if rating != '' else np.nan
+    return(rating)
 
 
 def prompt_for_author(books_db):
@@ -252,24 +121,20 @@ def prompt_for_author(books_db):
         print('The author may already exist. Select one of the following '
               'options to select an existing author or the last option to add '
               'a new author.')
-        prompt_strings = ['[{}] {}'.format(option + 1, name)
-                          for option, name
-                          in enumerate(author_list)]
-        new_author_index = len(author_list) + 1  # Last index for prompt
-        prompt_strings.append('[{}] New Author'.format(new_author_index))
-        select_prompt = '\n'.join(prompt_strings) + '\nSelection: '
-        author_options = set(range(1, new_author_index+1))
 
-        # Only accept a correct answer
-        author_select = prompt_for_options(select_prompt, author_options)
+        # Add New Author as options to author list
+        author_list.append('New Author')
+
+        author_dict = gen_enum_dict_from_list(author_list, zero_indexed=False)
+        author_select = prompt_from_enum_dict(author_dict)
 
         # Two cases: select new author or not:
-        if author_select == new_author_index:
+        if author_select == 'New Author':
             print('Provide the following information for a new author.')
             author_fn = input('Author First Name: ')
             author_mn = input('Author Middle Name (Optional): ')
         else:
-            author_filter = books_db['Author'] == author_list[author_select-1]
+            author_filter = books_db['Author'] == author_select
             author_index = books_db[author_filter].index[0]  # Need 1st index
             author_fn = books_db.loc[author_index, 'Author FN']
             author_mn = books_db.loc[author_index, 'Author MN']
@@ -279,6 +144,23 @@ def prompt_for_author(books_db):
         author_mn = ''
 
     return(author_fn, author_mn, author_ln)
+
+
+def generate_full_author(author_fn, author_mn, author_ln):
+    """ Combines author names into a single column
+
+    Inputs:
+        author_fn {string} -- Author first name
+        author_mn {string} -- Author middle name
+        author_ln {string} -- Author last name
+
+    Outputs
+        author {string} -- Combined author name (First, Middle, Last)
+    """
+
+    names = [name for name in [author_fn, author_mn, author_ln] if name != '']
+    author = ' '.join(names)
+    return(author)
 
 
 def add_new_book(books_db, book_title):
@@ -363,7 +245,8 @@ def edit_existing_book(books_db, book_title):
         author_mn = books_db.loc[books_db['Title'] == book_title,
                                  'Author MN'].values[0]
 
-        # Fix if no middle name!
+        # Fix if missing value
+        author_fn = '' if pd.isna(author_fn) else author_fn
         author_mn = '' if pd.isna(author_mn) else author_mn
 
         author_ln = books_db.loc[books_db['Title'] == book_title,
@@ -413,12 +296,13 @@ def update_book_db(db_directory):
         # Need to check case where book actually already exists
         if book_title in books_db['Title'].values:
             print('{} already exists in the database.'.format(book_title))
-            mode_prompt = ('Would you like to [1] edit the existing entry '
-                           'or [2] overwrite the data?: ')
-            mode_options = {1, 2}
-            switch_mode = prompt_for_options(mode_prompt, mode_options)
+            print('The database only supports one entry per title. Adding '
+                  'an entry will result in overwriting the previous data.')
+            switch_prompt = ('Would you like to edit the existing entry '
+                             'instead [Y/N]?: ')
+            switch_to_edit = prompt_for_yes(switch_prompt)
 
-            if int(switch_mode) == 1:
+            if switch_to_edit:
                 books_db = edit_existing_book(books_db, book_title)
             else:
                 books_db.drop(books_db[books_db['Title'] == book_title].index,
@@ -521,20 +405,15 @@ def propogate_to_book_db(reading_db, dir_path, book_title, mode):
     books_db = pd.read_csv(books_db_path)
     book_exists = book_title in books_db['Title'].values
 
-    # TODO: Potentially explore cleaner implementation...
-
-    if book_exists:
-        books_db = update_reading_count(reading_db, books_db, book_title)
-        books_db = update_book_rating(reading_db, books_db, book_title)
-        books_db = books_db.sort_values(by=['Author LN', 'Title'],
-                                        ignore_index=True)
-        books_db.to_csv(books_db_path, index=False)
-    elif mode == 'remove' and not book_exists:
+    if mode == 'remove' and not book_exists:
         print('Book doesn\'t exist in the books directory. No updates needed')
     else:
-        print('Cannot find {} in the books database.'.format(book_title))
-        print('Let\'s make a new entry...')
-        books_db = add_new_book(books_db, book_title)
+        # Add book first if it doesn't exist yet
+        if not book_exists:
+            print('Cannot find {} in the books database.'.format(book_title))
+            print('Let\'s make a new entry...')
+            books_db = add_new_book(books_db, book_title)
+        
         books_db = update_reading_count(reading_db, books_db, book_title)
         books_db = update_book_rating(reading_db, books_db, book_title)
         books_db = books_db.sort_values(by=['Author LN', 'Title'],
@@ -559,15 +438,9 @@ def add_reading_entry(reading_db, dir_path, book_title):
 
     # Get optional information
 
-    start_date = prompt_for_date('Start Date')
-    finish_date = prompt_for_date('End Date')
-    rating = input('Rating (1-5): ')
-
-    while rating not in {'', '1', '2', '3', '4', '5'}:
-        rating = input('Choose an integer between 1 and 5 or leave blank: ')
-
-    # Format rating
-    rating = int(rating) if rating != '' else np.nan
+    start_date = prompt_for_date('Start Date: ')
+    finish_date = prompt_for_date('End Date: ')
+    rating = prompt_for_rating('Rating (1-5): ')
 
     # Create temporary entry object
     new_entry_dict = {'Title': book_title,
@@ -604,7 +477,7 @@ def edit_reading_entry(reading_db, dir_path, book_title):
 
     edit_prompt = 'Which entry (index) would you like to edit?: '
     edit_options = filtered_db.index
-    index_to_edit = prompt_for_options(edit_prompt, edit_options)
+    index_to_edit = prompt_from_enum_options(edit_prompt, edit_options)
 
     print('Which property would you like to edit?')
 
@@ -615,19 +488,6 @@ def edit_reading_entry(reading_db, dir_path, book_title):
                  }
 
     new_value, prop_to_update = prompt_for_property(prop_dict)
-
-    # Correctly format the information
-    if prop_to_update == 'Start' or prop_to_update == 'Finish':
-        while True:
-            try:
-                new_value = pd.to_datetime(new_value).date()
-            except dateutil.parser._parser.ParserError:
-                print('Cannot parse the input to a date. Please try again.')
-                new_value = input('What is the new date?: ')
-                continue
-            break
-    elif prop_to_update == 'Rating':
-        new_value = int(new_value) if new_value != '' else np.nan
 
     reading_db.loc[index_to_edit, prop_to_update] = new_value
 
@@ -660,11 +520,11 @@ def remove_reading_entry(reading_db, dir_path, book_title):
 
     remove_prompt = 'Which entry (index) would you like to remove?: '
     remove_options = filtered_db.index
-    index_to_remove = prompt_for_options(remove_prompt, remove_options)
+    index_to_remove = prompt_from_enum_options(remove_prompt, remove_options)
     reading_db = reading_db.drop(index_to_remove)
 
     # Propogation to book database
-    propogate_to_book_db(reading_db, dir_path, book_title, 'edit')
+    propogate_to_book_db(reading_db, dir_path, book_title, 'remove')
 
     return(reading_db)
 
@@ -690,23 +550,18 @@ def update_reading_db(dir_path):
     # Print full database for ease of viewing
     print_db(reading_db, 'reading')
 
-    update_mode = select_mode()
-
+    update_mode = select_mode()  # [1] Add, [2] Edit, [3] Remove
     title = prompt_for_title(reading_db, update_mode)
 
     if update_mode == 1:
         if title in reading_db['Title'].values:
             print('An entry for {} already exists.'.format(title))
             switch_prompt = 'Would you like to edit an entry instead [Y/N]?: '
-            switch_to_edit = input(switch_prompt)
+            switch_to_edit = prompt_for_yes(switch_prompt)
 
-            # First restrict to acceptable inputs
-            while switch_to_edit not in {'Y', 'y', 'N', 'n'}:
-                switch_to_edit = input('Please choose [Y/N]: ')
-
-            if switch_to_edit in {'Y', 'y'}:
+            if switch_to_edit:
                 reading_db = edit_reading_entry(reading_db, dir_path, title)
-            elif switch_to_edit in {'N', 'n'}:
+            else:
                 reading_db = add_reading_entry(reading_db, dir_path, title)
         else:
             reading_db = add_reading_entry(reading_db, dir_path, title)

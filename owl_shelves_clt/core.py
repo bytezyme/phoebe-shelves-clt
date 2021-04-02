@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
-from config_api import read_configs, update_configs
+from config_utils import read_configs, update_configs
 
-from data_management import create_databases, update_book_db, update_reading_db
+from database_creation import init_databases
+from data_management import update_book_db, update_reading_db
 from data_view import view_module
 
 
@@ -93,7 +94,7 @@ def main():
 
         # Initialize the databases
         configs = read_configs(config_path)
-        create_databases(args.force, configs.get('PATHS', 'data_directory'))
+        init_databases(args.force, configs.get('PATHS', 'data_directory'))
 
     elif args.mode == 'config':
         # User specifies update to data_directory
