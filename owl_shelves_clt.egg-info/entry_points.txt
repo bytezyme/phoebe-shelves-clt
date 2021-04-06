@@ -1,3 +1,0 @@
-[console_scripts]
-owl_shelves_clt = owl_shelves_clt.__main__:main
-

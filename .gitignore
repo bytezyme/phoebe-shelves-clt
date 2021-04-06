@@ -8,4 +8,7 @@ tests
 data/books.csv
 data/reading.csv
 data/test.png
-setup.cfg
+config.cfg
+
+# Development
+owl_shelves_clt.egg-info
