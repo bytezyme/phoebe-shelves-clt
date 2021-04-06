@@ -2,6 +2,8 @@
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 from input_utils import prompt_from_enum_dict, prompt_from_enum_options
 from input_utils import prompt_for_pos_int, prompt_for_date, prompt_for_yes
@@ -144,10 +146,32 @@ def reading_filter(db):
     else:
         db = numerical_threshold_filter(db, col_select)
 
-    db['Start'] = pd.to_datetime(db['Start']).dt.date
-    db['Finish'] = pd.to_datetime(db['Finish']).dt.date
     return(db)
 
+
+def graphing_module(db, db_select, dir_path):
+    """ Graphing module for data
+
+    # TODO: Figure out best way to implement proper visualization
+    """
+
+    if db_select == "books":
+        pass
+    else:
+        # Fix date formats from datetime to date for groupby
+        db['Finish'] = pd.to_datetime(db['Finish'])
+        db['Start'] = pd.to_datetime(db["Start"])
+
+        db_finish = db.groupby(pd.Grouper(key='Finish', freq='MS'))["Title"].count()
+        db_finish = pd.DataFrame({'Monthly': db_finish.values, 'CSum': db_finish.cumsum()})
+        db_finish.index = db_finish.index.date
+        fig, ax = plt.subplots()
+        ax.bar(db_finish.index, db_finish["Monthly"], align='center')
+        ax2 = ax.twinx()
+        ax2.plot(db_finish.index, db_finish['CSum'])
+        ax.xaxis.set_major_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+        plt.savefig(dir_path + '/test.png')
 
 def view_module(args, dir_path):
     """Top-level flow to view databases
@@ -173,6 +197,11 @@ def view_module(args, dir_path):
     db_path = dir_path + '/{}.csv'.format(db_select)
     db = pd.read_csv(db_path)
 
+    # Update column types
+    if db_select == 'reading':
+        db['Start'] = pd.to_datetime(db['Start']).dt.date
+        db['Finish'] = pd.to_datetime(db['Finish']).dt.date
+
     # Step 2: Select View Mode
     view_mode_prompt = ('Would you like to [1] view as table, [2] visualize as'
                         ' a chart, or [3] calculate aggregate values?: ')
@@ -187,8 +216,6 @@ def view_module(args, dir_path):
         if db_select == 'books':
             db = books_filter(db)
         else:
-            db['Start'] = pd.to_datetime(db['Start']).dt.date
-            db['Finish'] = pd.to_datetime(db['Finish']).dt.date
             db = reading_filter(db)
 
     # Step 4: Process into final form and visualize
@@ -196,6 +223,7 @@ def view_module(args, dir_path):
     if view_mode == 1:
         print_db(db, db_select)
     elif view_mode == 2:
+        graphing_module(db, db_select, dir_path)
         pass
     else:
         # TODO: Implement aggregation selection

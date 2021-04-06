@@ -7,4 +7,5 @@ tests
 # Custom/user Files
 data/books.csv
 data/reading.csv
+data/test.png
 setup.cfg
