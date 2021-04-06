@@ -3,11 +3,11 @@
 import pandas as pd
 import numpy as np
 
-from data_view import print_db, print_db_title
+from .data_view import print_db, print_db_title
 
-from input_utils import prompt_from_enum_options, prompt_from_enum_dict
-from input_utils import prompt_for_yes, prompt_for_date
-from input_utils import gen_enum_dict_from_list
+from .input_utils import prompt_from_enum_options, prompt_from_enum_dict
+from .input_utils import prompt_for_yes, prompt_for_date
+from .input_utils import gen_enum_dict_from_list
 
 """ Common Functions """
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 import argparse
-from config_utils import read_configs, update_configs
+from .config_utils import read_configs, update_configs
 
-from database_creation import init_databases
-from data_management import update_book_db, update_reading_db
-from data_view import view_module
+from .database_creation import init_databases
+from .data_management import update_book_db, update_reading_db
+from .data_view import view_module
 
 
 def arg_parser():
@@ -81,7 +81,7 @@ def arg_parser():
 
 def main():
     """Main program"""
-    config_path = 'setup.cfg'
+    config_path = 'config.cfg'
     args = arg_parser()
 
     if args.mode == 'init':

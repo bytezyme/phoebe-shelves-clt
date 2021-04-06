@@ -5,8 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from input_utils import prompt_from_enum_dict, prompt_from_enum_options
-from input_utils import prompt_for_pos_int, prompt_for_date, prompt_for_yes
+from .input_utils import prompt_from_enum_dict, prompt_from_enum_options
+from .input_utils import prompt_for_pos_int, prompt_for_date, prompt_for_yes
 
 
 def print_db(db, db_type):
@@ -173,6 +173,40 @@ def graphing_module(db, db_select, dir_path):
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
         plt.savefig(dir_path + '/test.png')
 
+def aggregation_module(db, db_select, dir_path):
+    """
+    TODO: Finish cleaning up reading db data aggregation
+    """
+
+    if db_select == "books":
+        """ Different Reports:
+            - Author: [Number of Books, Total Read Count, Average Read Count, Average Rating]
+            - Genre: [Number of Books, Total Read Count, Average Read Count, Average Rating]
+            - Rating: [Number of Books]
+            - Book: [Times Read, Average Reading Time]
+        """
+        print('WIP')
+    else:
+        """ Different Reports:
+            - Finish Month: [Books Read, Pages Read]
+        """
+
+        # Need books to merge book length
+
+        drop_list = ['Rating_x', 'Rating_y', 'Start', 'Reading Time',
+                     'Author', 'Author FN', 'Author MN', 'Author LN',
+                     'Times Read', 'Genre']
+        books_db = pd.read_csv(dir_path + '/books.csv')
+        merged_db = db.merge(books_db, on='Title').drop(columns=drop_list)
+
+        merged_db['Finish'] = pd.to_datetime(merged_db['Finish'])
+        merged_db = merged_db.groupby(pd.Grouper(key='Finish', freq='MS')).agg({'Title': 'count', 'Length': 'sum'})
+        merged_db.reset_index(inplace=True)
+        merged_db.columns = ['Month', 'Books Read', 'Pages Read']
+        merged_db['Month'] = merged_db['Month'].dt.date
+        print('\n' + merged_db.to_markdown(tablefmt='grid', index=False) + '\n')
+
+
 def view_module(args, dir_path):
     """Top-level flow to view databases
 
@@ -224,7 +258,5 @@ def view_module(args, dir_path):
         print_db(db, db_select)
     elif view_mode == 2:
         graphing_module(db, db_select, dir_path)
-        pass
     else:
-        # TODO: Implement aggregation selection
-        pass
+        aggregation_module(db, db_select, dir_path)
