@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import os
 from .config_utils import read_configs, update_configs
 
 from .database_creation import init_databases
@@ -81,7 +82,11 @@ def arg_parser():
 
 def main():
     """Main program"""
-    config_path = 'config.cfg'
+
+    # TODO: This needs to be generalized for distirubtion
+    config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
+
+    # DEBUG: Test
     args = arg_parser()
 
     if args.mode == 'init':
