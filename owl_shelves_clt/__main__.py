@@ -42,6 +42,9 @@ def arg_parser():
     config_parser.add_argument('-d', '--directory',
                                help='Path to database directory')
 
+    config_parser.add_argument('-c', '--check', action='store_true',
+                               help='Print out current data directory path')
+
     # Access Parser
     view_parser = subparsers.add_parser('view',
                                         help='Visualize databases')
@@ -86,7 +89,6 @@ def main():
     # TODO: This needs to be generalized for distirubtion
     config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
 
-    # DEBUG: Test
     args = arg_parser()
 
     if args.mode == 'init':
@@ -101,13 +103,16 @@ def main():
         init_databases(args.force, configs.get('PATHS', 'data_directory'))
 
     elif args.mode == 'config':
-        # User specifies update to data_directory
-        if args.directory:
-            updated_configs = {'PATHS': {'data_directory': args.directory}}
+        if args.check:
+            configs = read_configs(config_path)
+            print('Directory Path: ' + configs.get('PATHS', 'data_directory'))
         else:
-            updated_configs = {'PATHS': {'data_directory': 'data'}}
+            if args.directory:
+                updated_configs = {'PATHS': {'data_directory': args.directory}}
+            else:
+                updated_configs = {'PATHS': {'data_directory': 'data'}}
 
-        update_configs(config_path, updated_configs)
+            update_configs(config_path, updated_configs)
 
     elif args.mode == 'view':
         configs = read_configs(config_path)
@@ -119,6 +124,15 @@ def main():
             update_book_db(configs.get('PATHS', 'data_directory'))
         elif args.readingdb:
             update_reading_db(configs.get('PATHS', 'data_directory'))
+
+
+def cli_entry_point():
+    """Entry point for a command line call"""
+    try:
+        main()
+    except (KeyboardInterrupt, EOFError):
+        print("\nClosing... No changes have been saved!")
+        pass
 
 
 if __name__ == '__main__':

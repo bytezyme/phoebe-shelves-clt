@@ -11,7 +11,7 @@ setup(
     zip_safe=False,
     entry_points={
         'console_scripts': [
-            'owl_shelves_clt = owl_shelves_clt.__main__:main'
+            'owl_shelves_clt = owl_shelves_clt.__main__:cli_entry_point'
         ]
     }
 )
