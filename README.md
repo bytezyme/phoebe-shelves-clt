@@ -46,11 +46,11 @@ Owl Shelves has the following dependencies:
 The script relies on a configuration file (`config.cfg`) located in the `owl_shelves_clt` folder. This configuration file only stores the path to the data directory that will store the CSV files. To setup the configuration file, you can use the included `config` option:
 
 ```console
-# Initialize configuration using the default data directory path
-owl_shelves_clt config
+// Initialize configuration using the default data directory path
+$ owl_shelves_clt config
 
-# Initialize configuration using a custom data directory path
-owl_shelves_clt config -d path_to_custom_directory>
+// Initialize configuration using a custom data directory path
+$ owl_shelves_clt config -d path_to_custom_directory>
 ```
 
 To modify the path afterwards, use the second option above.
@@ -60,13 +60,13 @@ To modify the path afterwards, use the second option above.
 Once you are done configuring the data directory path, the next step is to initialize the CSV files. This can be done via the following:
 
 ```console
-owl_shelves_clt init
+$ owl_shelves_clt init
 ```
 
 If there is already an existing `books.csv` or `reading.csv` in the target directory, it will not overwrite the files without confirmation. To force-overwrite exsiting files, pass the additional `-f` argument:
 
 ```console
-owl_shelves_clt init -f
+$ owl_shelves_clt init -f
 ```
 
 ### Viewing and Managing the Databases
@@ -74,9 +74,9 @@ owl_shelves_clt init -f
 There are two primary modes for working with the databases: "view" and "manage" mode. The modes can be quickly activated by passing in the appropriate arguments:
 
 ```console
-owl_shelves_clt view <optional-flags>
+$ owl_shelves_clt view <optional-flags>
 
-owl_shelves_clt manage <optional-flags>
+$ owl_shelves_clt manage <optional-flags>
 ```
 
 If no optional flags are passed, then an interactive prompt will guide you through options for interacting with the databases.
@@ -92,7 +92,7 @@ There are two sets of optional arguments that can be passed when using the viewi
 
 ```console
 // Directly enter analyze action on the reading database
-owl_shelves_clt view -rd -m analyze
+$ owl_shelves_clt view -rd -m analyze
 ```
 
 #### Managing the Databases
