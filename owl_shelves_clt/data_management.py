@@ -296,7 +296,7 @@ def update_book_db(db_directory):
     books_db = pd.read_csv(db_path)
 
     # Print database for easy access
-    print_db(books_db, 'books')
+    # print_db(books_db, 'books')
 
     update_mode = select_mode()
     book_title = prompt_for_title(books_db, update_mode)
@@ -554,7 +554,7 @@ def update_reading_db(dir_path):
     reading_db['Finish'] = pd.to_datetime(reading_db['Finish']).dt.date
 
     # Print full database for ease of viewing
-    print_db(reading_db, 'reading')
+    # print_db(reading_db, 'reading')
 
     update_mode = select_mode()  # [1] Add, [2] Edit, [3] Remove
     title = prompt_for_title(reading_db, update_mode)
