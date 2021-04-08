@@ -1,13 +1,12 @@
 """Utility methods for viewing, filtering, and aggregating database data."""
 
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from .input_utils import prompt_from_enum_dict, prompt_from_enum_options
-from .input_utils import prompt_for_pos_int, prompt_for_date, prompt_for_yes
-from .input_utils import select_database
+from .utils_input import prompt_from_enum_dict, prompt_from_enum_options
+from .utils_input import prompt_for_pos_int, prompt_for_date, prompt_for_yes
+from .utils_input import select_database
 
 
 def print_db(db, db_type):
@@ -264,9 +263,6 @@ def view_module(args, dir_path):
         1. Prints a database as a table view to the command line
         2. Prints database aggregate data to the command line
     """
-
-    # TODO: Have 1) walkthrough with no options or 2) direct with
-    # TODO: Passed options
 
     # Step 1: Select which database to view
     db_select = select_database(args, dir_path)

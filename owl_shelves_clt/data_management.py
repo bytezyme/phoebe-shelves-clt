@@ -5,9 +5,9 @@ import numpy as np
 
 from .data_view import print_db_title
 
-from .input_utils import prompt_from_enum_options, prompt_from_enum_dict
-from .input_utils import prompt_for_yes, prompt_for_date, select_database
-from .input_utils import gen_enum_dict_from_list
+from .utils_input import prompt_from_enum_options, prompt_from_enum_dict
+from .utils_input import prompt_for_yes, prompt_for_date, select_database
+from .utils_input import gen_enum_dict_from_list
 
 """ Common Functions """
 
@@ -45,7 +45,7 @@ def prompt_for_title(db, update_mode):
 
     book_title = book_title = input('Please enter the book title: ')
 
-    if update_mode == 1:
+    if update_mode == 'add':
         return(book_title)
     else:
         while book_title not in db['Title'].values:
@@ -303,7 +303,7 @@ def update_book_db(args, db_directory):
 
     book_title = prompt_for_title(books_db, update_mode)
 
-    if update_mode == 1:
+    if update_mode == 'add':
 
         # Need to check case where book actually already exists
         if book_title in books_db['Title'].values:
@@ -322,7 +322,7 @@ def update_book_db(args, db_directory):
                 books_db = add_new_book(books_db, book_title)
         else:
             books_db = add_new_book(books_db, book_title)
-    elif update_mode == 2:
+    elif update_mode == 'edit':
         books_db = edit_existing_book(books_db, book_title)
     else:
         books_db = remove_existing_book(books_db, book_title)

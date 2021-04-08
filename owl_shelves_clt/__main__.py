@@ -3,7 +3,7 @@
 import os
 
 from .arg_parsing import arg_parser
-from .config_utils import read_configs, update_configs
+from .utils_config import read_configs, update_configs
 from .database_creation import init_module
 from .data_management import management_module
 from .data_view import view_module
