@@ -79,6 +79,49 @@ def numerical_threshold_filter(db, col_select):
     return(db)
 
 
+def date_filter(db, col_select):
+    """Use date thresholds to filter the database
+
+    Args:
+        db {DataFrame} -- Books or reading database as a pandas DataFrame
+        col_select {string} -- Column to filter on
+
+    Outputs:
+        db {DataFrame} -- Database filtered based on user-given thresholds
+    """
+
+    mode_prompt = ('Would you like to filter based on [1] an earliest date, '
+                   '[2] a latest date, [3] a range of dates, or [4] a '
+                   'specific year?: ')
+    mode_opts = {1, 2, 3, 4}
+    mode = prompt_from_enum_options(mode_prompt, mode_opts)
+
+    earliest_prompt = 'What\'s the earliest date you want to see?: '
+    latest_prompt = 'What\'s the latest date you want to see?: '
+    year_prompt = 'What year would you like to see?: '
+
+    if mode == 1:
+        threshold = prompt_for_date(earliest_prompt)
+        db = db[db[col_select] >= threshold]
+    elif mode == 2:
+        threshold = prompt_for_date(latest_prompt)
+        db = db[db[col_select] >= threshold]
+    elif mode == 3:
+        earliest_threshold = prompt_for_date(earliest_prompt)
+        latest_threshold = prompt_for_date(latest_prompt)
+        earliest_filter = db[col_select] >= earliest_threshold
+        latest_filter = db[col_select] <= latest_threshold
+        db = db[earliest_filter & latest_filter]
+    else:
+        year_threshold = prompt_for_date(year_prompt)
+        upper_threshold = year_threshold + pd.DateOffset(years=1)
+        lower_threshold = year_threshold - pd.DateOffset(years=1)
+        earliest_filter = db[col_select] >= lower_threshold
+        latest_filter = db[col_select] <= upper_threshold
+        db = db[earliest_filter & latest_filter]
+
+    return(db)
+
 def books_filter(db):
     """Filter books database based on user input
 
@@ -143,6 +186,8 @@ def reading_filter(db):
         values_dict = dict(zip(values_index, values))
         values_select = prompt_from_enum_dict(values_dict)
         db = db[db[col_select] == values_select]
+    elif col_select in {'Start', 'Finish'}:
+        db = date_filter(db, col_select)
     else:
         db = numerical_threshold_filter(db, col_select)
 
