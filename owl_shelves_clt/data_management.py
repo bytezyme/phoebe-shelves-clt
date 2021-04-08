@@ -3,10 +3,10 @@
 import pandas as pd
 import numpy as np
 
-from .data_view import print_db, print_db_title
+from .data_view import print_db_title
 
 from .input_utils import prompt_from_enum_options, prompt_from_enum_dict
-from .input_utils import prompt_for_yes, prompt_for_date
+from .input_utils import prompt_for_yes, prompt_for_date, select_database
 from .input_utils import gen_enum_dict_from_list
 
 """ Common Functions """
@@ -20,9 +20,10 @@ def select_mode():
     """
 
     prompt = ('Do you want to [1] add a new entry, [2] edit a current '
-              'entry, or [3] remove an entry?: ')
+              'entry, or [3] delete an entry?: ')
     options = {1, 2, 3}
-    return(prompt_from_enum_options(prompt, options))
+    modes = {1: 'add', 2: 'edit', 3: 'delete'}
+    return(modes[prompt_from_enum_options(prompt, options)])
 
 
 def prompt_for_title(db, update_mode):
@@ -281,10 +282,11 @@ def remove_existing_book(books_db, book_title):
     return(books_db.drop(books_db[books_db['Title'] == book_title].index))
 
 
-def update_book_db(db_directory):
+def update_book_db(args, db_directory):
     """Main function to update book database
 
     Args:
+        args {object} -- object containing command line arguments
         db_directory {string} -- Path to the data directory
 
     Outputs:
@@ -295,10 +297,10 @@ def update_book_db(db_directory):
     db_path = db_directory + '/' + 'books.csv'
     books_db = pd.read_csv(db_path)
 
-    # Print database for easy access
-    # print_db(books_db, 'books')
+    # Select Mode
+    update_mode = args.mode if args.mode is not None else select_mode()
+    print('Entering {} mode...'.format(update_mode))
 
-    update_mode = select_mode()
     book_title = prompt_for_title(books_db, update_mode)
 
     if update_mode == 1:
@@ -535,10 +537,11 @@ def remove_reading_entry(reading_db, dir_path, book_title):
     return(reading_db)
 
 
-def update_reading_db(dir_path):
+def update_reading_db(args, dir_path):
     """Main function to update book database
 
     Args:
+        args {object} -- object containing command line arguments
         dir_path {string} -- Path to the data directory
 
     Outputs:
@@ -553,13 +556,13 @@ def update_reading_db(dir_path):
     reading_db['Start'] = pd.to_datetime(reading_db['Start']).dt.date
     reading_db['Finish'] = pd.to_datetime(reading_db['Finish']).dt.date
 
-    # Print full database for ease of viewing
-    # print_db(reading_db, 'reading')
+    # Select Mode
+    update_mode = args.mode if args.mode is not None else select_mode()
+    print('Entering {} mode...'.format(update_mode))
 
-    update_mode = select_mode()  # [1] Add, [2] Edit, [3] Remove
     title = prompt_for_title(reading_db, update_mode)
 
-    if update_mode == 1:
+    if update_mode == 'add':
         if title in reading_db['Title'].values:
             print('An entry for {} already exists.'.format(title))
             switch_prompt = 'Would you like to edit an entry instead [Y/N]?: '
@@ -571,7 +574,7 @@ def update_reading_db(dir_path):
                 reading_db = add_reading_entry(reading_db, dir_path, title)
         else:
             reading_db = add_reading_entry(reading_db, dir_path, title)
-    elif update_mode == 2:
+    elif update_mode == 'edit':
         reading_db = edit_reading_entry(reading_db, dir_path, title)
     else:
         reading_db = remove_reading_entry(reading_db, dir_path, title)
@@ -579,3 +582,11 @@ def update_reading_db(dir_path):
     reading_db.sort_values(['Finish', 'Start'], na_position='last',
                            inplace=True)
     reading_db.to_csv(reading_db_path, index=False)
+
+
+def management_module(args, dir_path):
+    database_select = select_database(args, dir_path)
+    if database_select == 'books':
+        update_book_db(args, dir_path)
+    else:
+        update_reading_db(args, dir_path)

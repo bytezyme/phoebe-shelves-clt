@@ -38,7 +38,7 @@ def create_database(path, name, cols, db_exists, force_overwrite):
         print('Successfully created the {} database!'.format(name))
 
 
-def init_databases(force_overwrite, data_directory):
+def init_module(force_overwrite, data_directory):
     """Creates initial book and reading date csv files if not present
 
     Args:

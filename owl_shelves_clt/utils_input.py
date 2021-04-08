@@ -143,3 +143,19 @@ def prompt_for_yes(prompt):
     while selection not in {'Y', 'N'}:
         selection = input('Please choose [Y/N]')
     return(selection == 'Y')
+
+
+def select_database(args, dir_path):
+    if args.booksdb:
+        db_select = 'books'
+    elif args.readingdb:
+        db_select = 'reading'
+    else:
+        db_select_prompt = ('Would you like to view the [1] books database or '
+                            '[2] reading database?: ')
+        db_select_opts = {1, 2}
+        db_select = prompt_from_enum_options(db_select_prompt, db_select_opts)
+        db_select = 'books' if db_select == 1 else 'reading'
+
+    print('Using the {} database...'.format(db_select))
+    return(db_select)

@@ -7,6 +7,7 @@ import matplotlib.dates as mdates
 
 from .input_utils import prompt_from_enum_dict, prompt_from_enum_options
 from .input_utils import prompt_for_pos_int, prompt_for_date, prompt_for_yes
+from .input_utils import select_database
 
 
 def print_db(db, db_type):
@@ -268,11 +269,7 @@ def view_module(args, dir_path):
     # TODO: Passed options
 
     # Step 1: Select which database to view
-    db_select_prompt = ('Would you like to view the [1] books database or '
-                        '[2] reading database?: ')
-    db_select_opts = {1, 2}
-    db_select = prompt_from_enum_options(db_select_prompt, db_select_opts)
-    db_select = 'books' if db_select == 1 else 'reading'
+    db_select = select_database(args, dir_path)
     db_path = dir_path + '/{}.csv'.format(db_select)
     db = pd.read_csv(db_path)
 
@@ -282,10 +279,18 @@ def view_module(args, dir_path):
         db['Finish'] = pd.to_datetime(db['Finish']).dt.date
 
     # Step 2: Select View Mode
-    view_mode_prompt = ('Would you like to [1] view as table, [2] visualize as'
-                        ' a chart, or [3] calculate aggregate values?: ')
-    view_mode_opts = {1, 2, 3}
-    view_mode = prompt_from_enum_options(view_mode_prompt, view_mode_opts)
+    if args.mode is not None:
+        view_mode = args.mode
+    else:
+        view_mode_prompt = ('Would you like to [1] print to the console, [2] '
+                            'graph as a chart, or [3] analyze aggregate '
+                            'values?: ')
+        view_mode_opts = {1, 2, 3}
+        view_mode_dict = {1: 'print', 2: 'graph', 3: 'analyze'}
+        view_mode = prompt_from_enum_options(view_mode_prompt, view_mode_opts)
+        view_mode = view_mode_dict[view_mode]
+
+    print('Entering {} mode...'.format(view_mode))
 
     # Step 3: Filter data (if needed)
     to_filter_prompt = 'Would you like to search/filter the data first[Y/N]?: '
@@ -299,9 +304,9 @@ def view_module(args, dir_path):
 
     # Step 4: Process into final form and visualize
 
-    if view_mode == 1:
+    if view_mode == 'print':
         print_db(db, db_select)
-    elif view_mode == 2:
+    elif view_mode == 'graph':
         graphing_module(db, db_select, dir_path)
     else:
         aggregation_module(db, db_select, dir_path)
