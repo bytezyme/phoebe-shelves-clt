@@ -14,13 +14,15 @@ Owl Shelves is reading management tool based on 1) a book database and 2) a read
 
 ## Instructions
 
-The following provides an overview of how to use the script. Currently, the tools are unavailiable via PyPI. You can download scripts by cloning to your device.
+The following provides an overview of how to use the script. Currently, the tools are unavailiable via PyPI, but you can utilize the scripts by cloning the repository to your device.
 
 ### General Usage
 
 ```console
 owl_shelves_clt <mode> <optional-flags>
 ```
+
+At any point during the interactive prompts, you can utilize Ctrl-C or Ctrl-D to safely close the program without modifying any files.
 
 ### Installation and Configuration
 
@@ -47,10 +49,10 @@ The script relies on a configuration file (`config.cfg`) located in the `owl_she
 
 ```console
 // Initialize configuration using the default data directory path
-$ owl_shelves_clt config
+owl_shelves_clt config
 
 // Initialize configuration using a custom data directory path
-$ owl_shelves_clt config -d path_to_custom_directory>
+owl_shelves_clt config -d path_to_custom_directory>
 ```
 
 To modify the path afterwards, use the second option above.
@@ -60,13 +62,13 @@ To modify the path afterwards, use the second option above.
 Once you are done configuring the data directory path, the next step is to initialize the CSV files. This can be done via the following:
 
 ```console
-$ owl_shelves_clt init
+owl_shelves_clt init
 ```
 
 If there is already an existing `books.csv` or `reading.csv` in the target directory, it will not overwrite the files without confirmation. To force-overwrite exsiting files, pass the additional `-f` argument:
 
 ```console
-$ owl_shelves_clt init -f
+owl_shelves_clt init -f
 ```
 
 ### Viewing and Managing the Databases
@@ -74,9 +76,9 @@ $ owl_shelves_clt init -f
 There are two primary modes for working with the databases: "view" and "manage" mode. The modes can be quickly activated by passing in the appropriate arguments:
 
 ```console
-$ owl_shelves_clt view <optional-flags>
+owl_shelves_clt view <optional-flags>
 
-$ owl_shelves_clt manage <optional-flags>
+owl_shelves_clt manage <optional-flags>
 ```
 
 If no optional flags are passed, then an interactive prompt will guide you through options for interacting with the databases.
@@ -85,24 +87,38 @@ If no optional flags are passed, then an interactive prompt will guide you throu
 
 There are three primary actions for viewing the database: 1) printing the database to the terminal, 2) graphing the database using different charts, and 3) analyzing the database for aggregate information. **Currently, only printing the database is fully implemented.**
 
-There are two sets of optional arguments that can be passed when using the viewing mode: 
+There are two sets of optional arguments that can be passed when in the viewing mode:
 
 - `-rd/-bd`: Use the reading database or books database, respectively
 - `-m <print/graph/analyze>`: Enter the print, graph, or analyze actions instead of following the interactive prompt
 
+If any of the optional arguments are not passed, you will be prompted to choose an option.
+
 ```console
 // Directly enter analyze action on the reading database
-$ owl_shelves_clt view -rd -m analyze
+owl_shelves_clt view -rd -m analyze
+
+// Select print action, but get prompt for database selection
+owl_shelves_clt view -m print
 ```
+
+For all actions, you will be prompted to optionally filter the database based on the column data, such as the start or finish date in the reading database. If decide to filter a database, this filtered database will be used for the action rather than the original database.
 
 #### Managing the Databases
 
-Mangaging the databases occurs through interactive prompts via the command line. Once you enter a management flow, you can pass the keyboard interrupt "Ctrl-C" to gracefully exit.
+Mangaging the databases occurs through interactive prompts via the command line. There are three primary actions for managing the database: 1) adding a new entry, 2) editing an existing entry, and 3) deleting an existing entry.
+
+There are two sets of optional arguments that can be passed wheb in the managing mode:
+
+- `-rd/-bd`: Use the reading database or books database, respectively
+- `-m <add/edit/delete>`: Enter the add, edit, or delete actions instead of following the interactive prompt
+
+Similar to the viewing mode, you if an optional argument is not initially passed, you will be prompted to choose an option.
 
 ```console
-# Enter management mode for the reading database
-python3 code/core.py manage -rd
+// Directly enter edit action on the reading database
+owl_shelves_clt manage -rd -m edit
 
-# Enter management mode for the book database
-python3 code/core.py managed -bd
+// Select delete action, but get prompt for database selection
+owl_shelves_clt -m delete
 ```
