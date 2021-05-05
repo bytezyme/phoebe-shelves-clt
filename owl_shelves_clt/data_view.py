@@ -115,8 +115,7 @@ def date_filter(db, col_select):
     else:
         year_threshold = prompt_for_date(year_prompt)
         upper_threshold = year_threshold + pd.DateOffset(years=1)
-        lower_threshold = year_threshold - pd.DateOffset(years=1)
-        earliest_filter = db[col_select] >= lower_threshold
+        earliest_filter = db[col_select] >= year_threshold
         latest_filter = db[col_select] <= upper_threshold
         db = db[earliest_filter & latest_filter]
 
