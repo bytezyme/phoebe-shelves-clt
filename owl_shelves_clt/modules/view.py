@@ -5,9 +5,8 @@ import click
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from .utils_input import prompt_from_enum_dict, prompt_from_enum_options
-from .utils_input import prompt_for_pos_int, prompt_for_date, prompt_for_yes
-from .utils_input import select_database
+from ..utils.input import prompt_from_enum_dict, prompt_from_enum_options
+from ..utils.input import prompt_for_pos_int, prompt_for_date
 
 
 def print_db(db, db_type):

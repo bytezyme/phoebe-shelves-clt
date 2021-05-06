@@ -1,14 +1,11 @@
-#!/usr/bin/env python
-
 import os
 import click
 
 
-from .arg_parsing import arg_parser
 from .utils.config import read_configs, update_data_dir_path
-from .modules.initialization import init_module
-from .data_management import management_module
-from .data_view import view_module
+from .modules.initialize import init_module
+from .modules.manage import management_module
+from .modules.view import view_module
 
 # Common Option Sets
 db_choice = click.argument("database", type=click.Choice(["reading", "books"],
