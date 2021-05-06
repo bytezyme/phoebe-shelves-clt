@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import os
+import click
+
 
 from .arg_parsing import arg_parser
 from .utils_config import read_configs, update_configs
@@ -12,7 +14,7 @@ from .data_view import view_module
 def main():
     """Main program"""
 
-    # TODO: This needs to be generalized for distirubtion
+    # TODO: This needs to be generalized for distribution
     config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
 
     args = arg_parser()
