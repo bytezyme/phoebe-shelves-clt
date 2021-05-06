@@ -5,64 +5,103 @@ import click
 
 
 from .arg_parsing import arg_parser
-from .utils_config import read_configs, update_configs
-from .database_creation import init_module
+from .utils.config import read_configs, update_data_dir_path
+from .modules.initialization import init_module
 from .data_management import management_module
 from .data_view import view_module
 
+# Common Option Sets
+db_choice = click.argument("database", type=click.Choice(["reading", "books"],
+                                                         case_sensitive=False))
 
-def main():
-    """Main program"""
+@click.group()
+@click.pass_context
+def cli(ctx):
+    """A command-line tool for tracking your reading!
+    
+    Owl Shelves CLT provides tools for tracking your reading based on two local
+    CSV files.
+    
+    """
+    # Ensure there's a dictionary if called directly
+    ctx.ensure_object(dict)
+    
 
+    # Prepare overall configuration of the data directory
     # TODO: This needs to be generalized for distribution
     config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
-
-    args = arg_parser()
-
-    if args.action == 'init':
-
-        # Use the user-specified path if passed, otherwise use default
-        if args.path:
-            new_configs = {'PATHS': {'data_directory': args.path}}
-            update_configs(config_path, new_configs)
-
-        # Initialize the databases
-        configs = read_configs(config_path)
-        init_module(args.force, configs.get('PATHS', 'data_directory'))
-
-    elif args.action == 'config':
-        if args.check:
-            configs = read_configs(config_path)
-            print('Directory Path: ' + configs.get('PATHS', 'data_directory'))
-        else:
-            if args.directory:
-                new_configs = {'PATHS': {'data_directory': args.directory}}
-            else:
-                new_configs = {'PATHS': {'data_directory': 'data'}}
-
-            update_configs(config_path, new_configs)
-
-    elif args.action == 'view':
-        configs = read_configs(config_path)
-        view_module(args, configs.get('PATHS', 'data_directory'))
-
-    elif args.action == 'manage':
-        configs = read_configs(config_path)
-        management_module(args, configs.get('PATHS', 'data_directory'))
+    ctx.obj["cfg_path"] = config_path
+    ctx.obj["cfgs"] = read_configs(config_path)
 
 
-def cli_entry_point():
-    """Entry point for a command line call"""
-    try:
-        main()
-    except (KeyboardInterrupt, EOFError):
-        print("\nClosing... No changes have been saved!")
-        pass
+@cli.command()
+@click.option("-f", "--force", is_flag=True)
+@click.option("-p", "--path")
+@click.pass_context
+def init(ctx, force, path):
+    """Initialize new databases.
+    """
+    
+    # Switch to a new user-specified path if needed
+    if path:
+        update_data_dir_path(ctx.obj["cfg_path"], ctx.obj["cfgs"], path)
+        ctx.obj["cfgs"]["PATHS"]["data_directory"] = path
+    
+    init_module(force, ctx.obj["cfgs"]["PATHS"]["data_directory"])
+    
+
+@cli.command()
+@click.option("-c", "--check", is_flag=True,
+              help="Print out the current database directory configuration.")
+@click.option("-u", "--update",
+              help="Update the database directory configuration to TEXT.")
+@click.pass_context
+def config(ctx, check, update):
+    """Manage tool configurations.
+    """
+    # Print out current data directory
+    if check:
+        data_directory = ctx.obj["cfgs"]["PATHS"]["data_directory"]
+        print("Current data directory: {}".format(data_directory))
+        
+    # Update directory
+    if update:
+        print("Updated directory: {}".format(update))
+        update_data_dir_path(ctx.obj["cfg_path"], ctx.obj["cfgs"], update)
 
 
-if __name__ == '__main__':
-    try:
-        main()
-    except (KeyboardInterrupt, EOFError):
-        print("\nClosing... No changes have been saved!")
-        pass
+@cli.command()
+@db_choice
+@click.argument("mode",
+                type=click.Choice(["print", "graph", "analyze"],
+                                  case_sensitive=False))
+@click.pass_context
+def view(ctx, database, mode):
+    """Visualize a database using different options.
+    
+    \b
+    [reading|book]: Database to visualize
+    
+    \b
+    [print|graph|analyze]: Method of visualization
+        - print: Print table to command-line
+        - graph: Generate charts using plotting modules
+        - analyze: Generate summary/aggregate statistics
+    """
+    view_module(database, mode, ctx.obj["cfgs"]["PATHS"]["data_directory"])
+
+
+@cli.command()
+@db_choice
+@click.argument("mode",
+              type=click.Choice(["add", "edit", "delete"], 
+                                case_sensitive=False))
+@click.pass_context
+def manage(ctx,database, mode):
+    """Add, edit, or delete entries from a database.
+    """
+    management_module(database, mode, ctx.obj["cfgs"]["PATHS"]["data_directory"])
+
+
+if __name__ == "__main__":
+    cli(obj={})

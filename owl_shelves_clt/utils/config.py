@@ -5,10 +5,13 @@ and updated configuration file to a given path using the configparser package.
 """
 
 import configparser
+import os
 
 
 def read_configs(config_path):
     """Read in a configuration file from a location.
+    
+    TODO: Update this section
 
     Args:
         config_path {string} -- Path to configuration file location
@@ -16,14 +19,34 @@ def read_configs(config_path):
     Outputs:
         configs {configparser} -- Configurations
     """
-
-    configs = configparser.ConfigParser()
-    configs.read(config_path)
+    
+    if not os.path.isfile(config_path):
+        configs = create_configs(config_path)
+    else:
+        configs = configparser.ConfigParser()
+        configs.read(config_path)
+    
     return(configs)
 
+def create_configs(config_path):
+    """Create new configuration file if none exists
+    
+    TODO: Update this section
+    
+    """
+    configs = configparser.ConfigParser()
+    configs["PATHS"] = {'data_directory': 'data'}
+    
+    with open(config_path, 'w') as config_file:
+        configs.write(config_file)
+    
+    return(configs)
+    
 
-def update_configs(config_path, update_dict):
+def update_data_dir_path(config_path, configs, new_dir_path):
     """Update and save a configuration file.
+    
+    TODO: Update this section
 
     Args:
         config_path {string} -- Path to configuration file location
@@ -33,9 +56,6 @@ def update_configs(config_path, update_dict):
         Saves the updated configuration file to the specified location
     """
 
-    configs = configparser.ConfigParser()
-    for section, key_value_dict in update_dict.items():
-        configs[section] = key_value_dict
-
+    configs["PATHS"]["data_directory"] = new_dir_path
     with open(config_path, 'w') as config_file:
         configs.write(config_file)

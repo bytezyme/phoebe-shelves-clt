@@ -282,7 +282,7 @@ def remove_existing_book(books_db, book_title):
     return(books_db.drop(books_db[books_db['Title'] == book_title].index))
 
 
-def update_book_db(args, db_directory):
+def update_book_db(update_mode, db_directory):
     """Main function to update book database
 
     Args:
@@ -294,13 +294,10 @@ def update_book_db(args, db_directory):
     """
 
     # Read in saved database
-    db_path = db_directory + '/' + 'books.csv'
+    db_path = db_directory + '/books.csv'
     books_db = pd.read_csv(db_path)
 
     # Select Mode
-    update_mode = args.mode if args.mode is not None else select_mode()
-    print('Entering {} mode...'.format(update_mode))
-
     book_title = prompt_for_title(books_db, update_mode)
 
     if update_mode == 'add':
@@ -537,7 +534,7 @@ def remove_reading_entry(reading_db, dir_path, book_title):
     return(reading_db)
 
 
-def update_reading_db(args, dir_path):
+def update_reading_db(update_mode, dir_path):
     """Main function to update book database
 
     Args:
@@ -557,8 +554,8 @@ def update_reading_db(args, dir_path):
     reading_db['Finish'] = pd.to_datetime(reading_db['Finish']).dt.date
 
     # Select Mode
-    update_mode = args.mode if args.mode is not None else select_mode()
-    print('Entering {} mode...'.format(update_mode))
+    # update_mode = args.mode if args.mode is not None else select_mode()
+    # print('Entering {} mode...'.format(update_mode))
 
     title = prompt_for_title(reading_db, update_mode)
 
@@ -584,9 +581,8 @@ def update_reading_db(args, dir_path):
     reading_db.to_csv(reading_db_path, index=False)
 
 
-def management_module(args, dir_path):
-    database_select = select_database(args, dir_path)
-    if database_select == 'books':
-        update_book_db(args, dir_path)
+def management_module(database, mode, dir_path):
+    if database == 'books':
+        update_book_db(mode, dir_path)
     else:
-        update_reading_db(args, dir_path)
+        update_reading_db(mode, dir_path)

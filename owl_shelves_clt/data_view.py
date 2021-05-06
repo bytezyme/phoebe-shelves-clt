@@ -1,6 +1,7 @@
 """Utility methods for viewing, filtering, and aggregating database data."""
 
 import pandas as pd
+import click
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
@@ -163,7 +164,7 @@ def books_filter(db):
 
 
 def reading_filter(db):
-    """Filter readingdatabase based on user input
+    """Filter reading database based on user input
 
     Args:
         db {DataFrame} -- Reading database as a pandas DataFrame
@@ -251,7 +252,7 @@ def aggregation_module(db, db_select, dir_path):
         print('\n' + merged_db.to_markdown(tablefmt='grid', index=False) + '\n')
 
 
-def view_module(args, dir_path):
+def view_module(database, view_mode, dir_path):
     """Top-level flow to view databases
 
     Args:
@@ -263,36 +264,21 @@ def view_module(args, dir_path):
         2. Prints database aggregate data to the command line
     """
 
-    # Step 1: Select which database to view
-    db_select = select_database(args, dir_path)
-    db_path = dir_path + '/{}.csv'.format(db_select)
+    # Step 1: Read in database
+    db_path = dir_path + '/{}.csv'.format(database)
     db = pd.read_csv(db_path)
 
     # Update column types
-    if db_select == 'reading':
+    if database == 'reading':
         db['Start'] = pd.to_datetime(db['Start']).dt.date
         db['Finish'] = pd.to_datetime(db['Finish']).dt.date
 
-    # Step 2: Select View Mode
-    if args.mode is not None:
-        view_mode = args.mode
-    else:
-        view_mode_prompt = ('Would you like to [1] print to the console, [2] '
-                            'graph as a chart, or [3] analyze aggregate '
-                            'values?: ')
-        view_mode_opts = {1, 2, 3}
-        view_mode_dict = {1: 'print', 2: 'graph', 3: 'analyze'}
-        view_mode = prompt_from_enum_options(view_mode_prompt, view_mode_opts)
-        view_mode = view_mode_dict[view_mode]
-
-    print('Entering {} mode...'.format(view_mode))
-
     # Step 3: Filter data (if needed)
-    to_filter_prompt = 'Would you like to search/filter the data first[Y/N]?: '
-    to_filter = prompt_for_yes(to_filter_prompt)
+    to_filter_prompt = 'Would you like to search/filter the data first?'
+    to_filter = click.confirm(to_filter_prompt)
 
     if to_filter:
-        if db_select == 'books':
+        if database == 'books':
             db = books_filter(db)
         else:
             db = reading_filter(db)
@@ -300,8 +286,8 @@ def view_module(args, dir_path):
     # Step 4: Process into final form and visualize
 
     if view_mode == 'print':
-        print_db(db, db_select)
+        print_db(db, database)
     elif view_mode == 'graph':
-        graphing_module(db, db_select, dir_path)
+        graphing_module(db, database, dir_path)
     else:
-        aggregation_module(db, db_select, dir_path)
+        aggregation_module(db, database, dir_path)
