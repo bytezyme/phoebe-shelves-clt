@@ -16,10 +16,12 @@ def arg_parser():
     subparsers = parser.add_subparsers(help="Top-level commands",
                                        dest='action')
 
+    # Add subparsers
     add_init_parser(subparsers)
     add_config_parser(subparsers)
     add_view_parser(subparsers)
     add_manage_parser(subparsers)
+
     return(parser.parse_args())
 
 

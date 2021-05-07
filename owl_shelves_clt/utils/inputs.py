@@ -148,12 +148,21 @@ def prompt_for_yes(prompt):
 def confirm(prompt, sep=':'):
     """Prompts the user with a yes/no prompt
 
+    Args:
+        prompt {string} -- Prompt user sees on the command-line
+        sep (opt) {string} -- Separator symbol between prompt and input
+
+    Outputs:
+        selection {bool} -- True if user indicates "yes"
+
     """
+
     final_prompt = prompt + ' [y/N]{} '.format(sep)
     selection = input(final_prompt).upper()
 
     while selection not in {'Y', 'N', 'YES', 'NO'}:
-        selection = input('Please choose [y/N]: ')
+        selection = input('Please choose [y/N]: ').upper()
+
     return(selection == 'Y' or selection == 'YES')
 
 

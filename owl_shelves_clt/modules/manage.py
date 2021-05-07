@@ -5,24 +5,8 @@ import numpy as np
 
 from .view import print_db_title
 from ..utils.inputs import prompt_from_enum_options, prompt_from_enum_dict
-from ..utils.inputs import prompt_for_yes, prompt_for_date, select_database
+from ..utils.inputs import confirm, prompt_for_date
 from ..utils.inputs import gen_enum_dict_from_list
-
-""" Common Functions """
-
-
-def select_mode():
-    """Requests user to select an update mode
-
-    Outputs:
-        update_mode {int} -- Indicates which of 3 update modes was selected
-    """
-
-    prompt = ('Do you want to [1] add a new entry, [2] edit a current '
-              'entry, or [3] delete an entry?: ')
-    options = {1, 2, 3}
-    modes = {1: 'add', 2: 'edit', 3: 'delete'}
-    return(modes[prompt_from_enum_options(prompt, options)])
 
 
 def prompt_for_title(db, update_mode):
@@ -302,14 +286,11 @@ def update_books_db(mode, db_directory):
 
         # Need to check case where book actually already exists
         if book_title in books_db['Title'].values:
-            print('{} already exists in the database.'.format(book_title))
-            print('The database only supports one entry per title. Adding '
-                  'an entry will result in overwriting the previous data.')
+            print('{} already exists in the database. Adding a new entry will '
+                  'will overwrite the existing data!'.format(book_title))
             switch_prompt = ('Would you like to edit the existing entry '
-                             'instead [Y/N]?: ')
-            switch_to_edit = prompt_for_yes(switch_prompt)
-
-            if switch_to_edit:
+                             'instead?')
+            if confirm(switch_prompt):
                 books_db = edit_existing_book(books_db, book_title)
             else:
                 books_db.drop(books_db[books_db['Title'] == book_title].index,
@@ -556,10 +537,8 @@ def update_reading_db(mode, dir_path):
     if mode == 'add':
         if title in reading_db['Title'].values:
             print('An entry for {} already exists.'.format(title))
-            switch_prompt = 'Would you like to edit an entry instead [Y/N]?: '
-            switch_to_edit = prompt_for_yes(switch_prompt)
-
-            if switch_to_edit:
+            switch_prompt = 'Would you like to edit an entry instead?'
+            if confirm(switch_prompt):
                 reading_db = edit_reading_entry(reading_db, dir_path, title)
             else:
                 reading_db = add_reading_entry(reading_db, dir_path, title)

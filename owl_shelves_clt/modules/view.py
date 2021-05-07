@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 from ..utils.inputs import prompt_from_enum_dict, prompt_from_enum_options
-from ..utils.inputs import prompt_for_pos_int, prompt_for_date, prompt_for_yes
-from ..utils.inputs import select_database
+from ..utils.inputs import prompt_for_pos_int, prompt_for_date, confirm
 
 
 def print_db(db, db_type):
@@ -121,6 +120,7 @@ def date_filter(db, col_select):
 
     return(db)
 
+
 def books_filter(db):
     """Filter books database based on user input
 
@@ -217,6 +217,7 @@ def graphing_module(db, db_select, dir_path):
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
         plt.savefig(dir_path + '/test.png')
 
+
 def aggregation_module(db, db_select, dir_path):
     """
     TODO: Finish cleaning up reading db data aggregation
@@ -263,26 +264,22 @@ def view_module(db_select, mode, dir_path):
         2. Prints database aggregate data to the command line
     """
 
-    # Step 1: Select which database to view
+    # Read in selected database
     db_path = dir_path + '/{}.csv'.format(db_select)
     db = pd.read_csv(db_path)
 
-    # Update column types
+    # Update column types if needed
     if db_select == 'reading':
         db['Start'] = pd.to_datetime(db['Start']).dt.date
         db['Finish'] = pd.to_datetime(db['Finish']).dt.date
 
-    # Step 3: Filter data (if needed)
-    to_filter_prompt = 'Would you like to search/filter the data first[Y/N]?: '
-    to_filter = prompt_for_yes(to_filter_prompt)
+    # Filter data if requested
+    to_filter_prompt = 'Would you like to search/filter the data first?'
 
-    if to_filter:
-        if db_select == 'books':
-            db = books_filter(db)
-        else:
-            db = reading_filter(db)
+    if confirm(to_filter_prompt):
+        db = books_filter(db) if db_select == 'books' else reading_filter(db)
 
-    # Step 4: Process into final form and visualize
+    # Prepare data based on selected mode
     if mode == 'table':
         print_db(db, db_select)
     elif mode == 'chart':

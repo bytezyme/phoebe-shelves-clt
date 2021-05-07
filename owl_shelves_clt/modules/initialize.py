@@ -35,8 +35,6 @@ def create_database(path, name, cols, force_overwrite):
     if create_db:
         pd.DataFrame(columns=cols).to_csv(path, index=False)
         print('Successfully created the {} database!'.format(name))
-    else:
-        print('Did not create the {} database'.format(name))
 
 
 def init_module(force_overwrite, data_directory):

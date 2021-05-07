@@ -21,7 +21,7 @@ def main():
     if args.action == 'init':
         if args.path:
             configs = update_data_dir(config_path, configs, args.path)
-            init_module(args.force, configs.get('PATHS', 'data_directory'))
+        init_module(args.force, configs.get('PATHS', 'data_directory'))
 
     elif args.action == 'config':
         if args.check:
