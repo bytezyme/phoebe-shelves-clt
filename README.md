@@ -23,7 +23,7 @@ The following provides an overview of how to use the script. Currently, the tool
 There are two types of tools: script configuration and database management.
 
 ```console
-owl_shelves_clt [tool] [arguments]
+$ owl_shelves_clt [tool] [arguments]
 ```
 
 At any point during the interactive prompts, you can utilize Ctrl-C or Ctrl-D to safely close the program without modifying any files.
@@ -53,10 +53,10 @@ The script relies on a configuration file (`config.cfg`) located in the `owl_she
 
 ```console
 // Initialize configuration using the default data directory path
-owl_shelves_clt config
+$ owl_shelves_clt config
 
 // Initialize configuration using a custom data directory path
-owl_shelves_clt config -u [path_to_custom_directory]
+$ owl_shelves_clt config -u [path_to_custom_directory]
 ```
 
 To modify the path afterwards, use the second option above.
@@ -66,7 +66,7 @@ To modify the path afterwards, use the second option above.
 Once you are done configuring the data directory path, the next step is to initialize the CSV files. This can be done via the following:
 
 ```console
-owl_shelves_clt init
+$ owl_shelves_clt init
 ```
 
 If there is already an existing `books.csv` or `reading.csv` in the target directory, it ask you to confirm if you would like to overwrite the files. If you want to overwrite existing files without confirmation, pass the `-f` flag.
@@ -80,9 +80,9 @@ owl_shelves_clt init -f
 There are two primary tools for working with the databases: "view" and "manage" mode. The modes can be quickly activated by passing in the appropriate arguments:
 
 ```console
-owl_shelves_clt view [database] [mode]
+$ owl_shelves_clt view [database] [mode]
 
-owl_shelves_clt manage [database] [mode]
+$ owl_shelves_clt manage [database] [mode]
 ```
 
 Each tool provides interactive prompts for the remainder of the script.
@@ -93,13 +93,13 @@ There are three primary modes for viewing the database: 1) printing a table to t
 
 ```console
 // Printing the books database as a table
-owl_shelves_clt view books table
+$ owl_shelves_clt view books table
 
 // Generating charts of the reading database
-owl_shelves_clt view reading charts
+$ owl_shelves_clt view reading charts
 
 // Calculate summary stats of the reading database
-owl_shelves_clt view reading stats
+$ owl_shelves_clt view reading stats
 ```
 
 For all modes, you will be prompted to optionally filter the database based on the column data, such as the start or finish date in the reading database. If decide to filter a database, this filtered database will be used for the remainder of the script rather than the original database.
@@ -110,10 +110,11 @@ There are three primary actions for managing the database: 1) adding a new entry
 
 ```console
 // Add new entry to the books database
-owl_shelves_clt manage books add
+$ owl_shelves_clt manage books add
 
 // Edit an entry in the books database
-owl_shelves_clt manage books edit
+$ owl_shelves_clt manage books edit
 
 // Delete an entry in the reading database
-owl_shelves_clt manage reading delete
+$ owl_shelves_clt manage reading delete
+```
