@@ -13,10 +13,9 @@ def create_database(path, name, cols, force_overwrite):
     """ Checks and creates the database as needed
 
     Args:
-        path {string} -- Path to database save location
+        path {string} -- Path to database location
         name {string} -- Name of the database
         cols {list} -- List of column names
-        db_exists {bool} -- True if database exists at path
         force_overwrite {bool} -- Indicator to save new database if one exists
 
     Returns:
@@ -45,7 +44,6 @@ def init_module(force_overwrite, data_directory):
         data_directory {string} -- Path to the data directory
 
     Returns:
-        Prints out status of the process
         Writes empty reading and book databases to the data_directory
     """
 

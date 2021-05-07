@@ -8,62 +8,34 @@ import pandas as pd
 import dateutil
 
 
-def prompt_from_enum_options(prompt, options):
-    """Prompt user to pass an integer associated with a set of options
+def prompt_from_choices(choices, prompt=None, zero_indexed=False):
+    """Prompt from a list of choices"""
 
-    Args:
-        prompt {string} -- Prompt that user sees on the command line
-        options {set/list} -- Set/list of acceptable integer inputs
+    # Get list of all of the options
+    if zero_indexed:
+        choices_index = list(range(0, len(choices)))
+    else:
+        choices_index = list(range(1, len(choices) + 1))
 
-    Outputs:
-        selection {int} -- Int representing the option selection
-    """
+    if prompt is None:
+        prompt = ['[{}] {}'.format(index, value)
+                  for index, value
+                  in zip(choices_index, choices)]
+        prompt = '\n'.join(prompt) + '\nSelection: '
 
     while True:
         try:
             selection = int(input(prompt))
-            if selection not in options:
+            if selection not in choices_index:
                 raise ValueError
-            return(selection)
+
+            if zero_indexed:
+                return(choices[selection])
+            else:
+                return(choices[selection - 1])
+
         except ValueError:
             print('Please enter one of the valid options.\n')
-
-
-def prompt_from_enum_dict(enum_dict):
-    """Prompt user selection from dictionary with integer keys
-
-    Args:
-        enum_dict {dict} -- Dict mapping integer keys to options
-
-    Outputs:
-        {string} -- Dictionary value associated with
-            the int selection
-    """
-
-    prompt = ['[{}] {}'.format(key, value)
-              for key, value
-              in enum_dict.items()]
-    prompt = '\n'.join(prompt) + '\nSelection: '
-    selection = prompt_from_enum_options(prompt, enum_dict.keys())
-    return(enum_dict[selection])
-
-
-def gen_enum_dict_from_list(values_list, zero_indexed=True):
-    """Generates a dictionary with integer keys from a list
-
-    Args:
-        values_list {list} -- List of elements to use as dictionary values
-        zero_indexed {bool} -- Indicates if keys should be zero- or one-indexed
-
-    Outputs:
-        {dict} -- Dictionary mapping integer keys to the input values list
-    """
-
-    if zero_indexed:
-        keys = list(range(len(values_list)))
-    else:
-        keys = list(range(1, len(values_list) + 1))
-    return(dict(zip(keys, values_list)))
 
 
 def prompt_for_int(prompt):
@@ -129,23 +101,7 @@ def prompt_for_date(prompt):
             print('Cannot parse the input as a date. Please try again.')
 
 
-def prompt_for_yes(prompt):
-    """Prompts user with a yes/no prompt
-
-    Args:
-        prompt {string} -- Prompt user sees on the command line
-
-    Outputs:
-        selection {bool} -- True if user passes 'Y' (yes)
-    """
-    selection = input(prompt).upper()
-
-    while selection not in {'Y', 'N'}:
-        selection = input('Please choose [Y/N]')
-    return(selection == 'Y')
-
-
-def confirm(prompt, sep=':'):
+def confirm(prompt, sep=': '):
     """Prompts the user with a yes/no prompt
 
     Args:
@@ -157,26 +113,10 @@ def confirm(prompt, sep=':'):
 
     """
 
-    final_prompt = prompt + ' [y/N]{} '.format(sep)
+    final_prompt = prompt + ' [y/N]{}'.format(sep)
     selection = input(final_prompt).upper()
 
     while selection not in {'Y', 'N', 'YES', 'NO'}:
-        selection = input('Please choose [y/N]: ').upper()
+        selection = input('Please choose [y/N]{}'.format(sep)).upper()
 
     return(selection == 'Y' or selection == 'YES')
-
-
-def select_database(args, dir_path):
-    if args.booksdb:
-        db_select = 'books'
-    elif args.readingdb:
-        db_select = 'reading'
-    else:
-        db_select_prompt = ('Would you like to view the [1] books database or '
-                            '[2] reading database?: ')
-        db_select_opts = {1, 2}
-        db_select = prompt_from_enum_options(db_select_prompt, db_select_opts)
-        db_select = 'books' if db_select == 1 else 'reading'
-
-    print('Using the {} database...'.format(db_select))
-    return(db_select)

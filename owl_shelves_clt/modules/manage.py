@@ -4,9 +4,7 @@ import pandas as pd
 import numpy as np
 
 from .view import print_db_title
-from ..utils.inputs import prompt_from_enum_options, prompt_from_enum_dict
-from ..utils.inputs import confirm, prompt_for_date
-from ..utils.inputs import gen_enum_dict_from_list
+from ..utils.inputs import confirm, prompt_for_date, prompt_from_choices
 
 
 def prompt_for_title(db, update_mode):
@@ -37,7 +35,7 @@ def prompt_for_title(db, update_mode):
         return(book_title)
 
 
-def prompt_for_property(prop_dict):
+def prompt_for_property(property_list):
     """Consolidate general property prompt
 
     Requests user to select a property from the database to edit and the
@@ -52,7 +50,7 @@ def prompt_for_property(prop_dict):
         prop_to_update {string} -- Name of the property to update
     """
 
-    prop_to_update = prompt_from_enum_dict(prop_dict)
+    prop_to_update = prompt_from_choices(property_list)
     update_prompt = 'What is the new {} value?: '.format(prop_to_update)
 
     # Use date parser if 'Start' or 'Finish
@@ -119,8 +117,7 @@ def prompt_for_author(books_db):
         # Add New Author as options to author list
         author_list.append('New Author')
 
-        author_dict = gen_enum_dict_from_list(author_list, zero_indexed=False)
-        author_select = prompt_from_enum_dict(author_dict)
+        author_select = prompt_from_choices(author_list)
 
         # Two cases: select new author or not:
         if author_select == 'New Author':
@@ -213,15 +210,9 @@ def edit_existing_book(books_db, book_title):
 
     print('Which property would you like to edit?')
 
-    prop_dict = {1: 'Title',
-                 2: 'Author FN',
-                 3: 'Author MN',
-                 4: 'Author LN',
-                 5: 'Length',
-                 6: 'Rating',
-                 7: 'Genre'}
+    property_list = books_db.columns.drop(['Author', 'Times Read'])
 
-    new_value, prop_to_update = prompt_for_property(prop_dict)
+    new_value, prop_to_update = prompt_for_property(property_list)
 
     # Change type as needed:
     if prop_to_update == 'Length':
@@ -251,7 +242,7 @@ def edit_existing_book(books_db, book_title):
     return(books_db)
 
 
-def remove_existing_book(books_db, book_title):
+def delete_existing_book(books_db, book_title):
     """Removes an existing book from the database
 
     Args:
@@ -265,20 +256,20 @@ def remove_existing_book(books_db, book_title):
     return(books_db.drop(books_db[books_db['Title'] == book_title].index))
 
 
-def update_books_db(mode, db_directory):
+def update_books_db(mode, data_directory):
     """Main function to update book database
 
     Args:
         args {object} -- object containing command line arguments
-        db_directory {string} -- Path to the data directory
+        data_directory {string} -- Path to the data directory
 
     Outputs:
         Saves an updated book database as a csv to the disk
     """
 
     # Read in saved database
-    db_path = db_directory + '/' + 'books.csv'
-    books_db = pd.read_csv(db_path)
+    books_db_path = data_directory + '/' + 'books.csv'
+    books_db = pd.read_csv(books_db_path)
 
     book_title = prompt_for_title(books_db, mode)
 
@@ -301,12 +292,12 @@ def update_books_db(mode, db_directory):
     elif mode == 'edit':
         books_db = edit_existing_book(books_db, book_title)
     else:
-        books_db = remove_existing_book(books_db, book_title)
+        books_db = delete_existing_book(books_db, book_title)
 
     # Sort books by author last name
     books_db = books_db.sort_values(by=['Author LN', 'Title'],
                                     ignore_index=True)
-    books_db.to_csv(db_path, index=False)
+    books_db.to_csv(books_db_path, index=False)
 
 
 def update_reading_time(start, finish):
@@ -372,20 +363,20 @@ def update_book_rating(reading_db, books_db, book_title):
     return(books_db)
 
 
-def propogate_to_book_db(reading_db, dir_path, book_title, mode):
+def propogate_to_book_db(reading_db, data_directory, book_title, mode):
     """Propogate reading database updates to the books database
 
     Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        dir_path {string} -- Path to directory containing the database csv's
+        data_directory {string} -- Path to database directory
         book_title {string} -- Book title
         mode {string} -- Add/Edit/Remove mode indicator
 
     Outputs:
-        Saves the updated books database as a csv to the dir_path
+        Saves the updated books database as a csv to the data_directory
     """
 
-    books_db_path = dir_path + '/books.csv'
+    books_db_path = data_directory + '/books.csv'
     books_db = pd.read_csv(books_db_path)
     book_exists = book_title in books_db['Title'].values
 
@@ -405,12 +396,12 @@ def propogate_to_book_db(reading_db, dir_path, book_title, mode):
         books_db.to_csv(books_db_path, index=False)
 
 
-def add_reading_entry(reading_db, dir_path, book_title):
+def add_reading_entry(reading_db, data_directory, book_title):
     """Adds a new reading entry for a book
 
     Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        dir_path {string} -- Path to directory containing the database csv's
+        data_directory {string} -- Path to database directory
         book_title {string} -- Title of book to use for the entry
 
     Outputs:
@@ -438,17 +429,17 @@ def add_reading_entry(reading_db, dir_path, book_title):
     reading_db = reading_db.append(new_entry_dict, ignore_index=True)
 
     # Propogate updates to books database
-    propogate_to_book_db(reading_db, dir_path, book_title, 'add')
+    propogate_to_book_db(reading_db, data_directory, book_title, 'add')
 
     return(reading_db)
 
 
-def edit_reading_entry(reading_db, dir_path, book_title):
+def edit_reading_entry(reading_db, data_directory, book_title):
     """Edits properties of an existing reading entry
 
     Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        dir_path {string} -- Path to directory containing the database csv's
+        data_directory {string} -- Path to database directory
         book_title {string} -- Title of book to filter for the reading entry
 
     Outputs:
@@ -461,17 +452,14 @@ def edit_reading_entry(reading_db, dir_path, book_title):
 
     edit_prompt = 'Which entry (index) would you like to edit?: '
     edit_options = filtered_db.index
-    index_to_edit = prompt_from_enum_options(edit_prompt, edit_options)
+    index_to_edit = prompt_from_choices(edit_options, edit_prompt,
+                                        zero_indexed=True)
 
     print('Which property would you like to edit?')
 
-    prop_dict = {1: 'Title',
-                 2: 'Start',
-                 3: 'Finish',
-                 4: 'Rating',
-                 }
+    property_list = reading_db.columns.drop('Reading Time')
 
-    new_value, prop_to_update = prompt_for_property(prop_dict)
+    new_value, prop_to_update = prompt_for_property(property_list)
 
     reading_db.loc[index_to_edit, prop_to_update] = new_value
 
@@ -481,17 +469,17 @@ def edit_reading_entry(reading_db, dir_path, book_title):
     reading_db.loc[index_to_edit, 'Reading Time'] = new_time
 
     # Propogate changes to books database
-    propogate_to_book_db(reading_db, dir_path, book_title, 'edit')
+    propogate_to_book_db(reading_db, data_directory, book_title, 'edit')
 
     return(reading_db)
 
 
-def remove_reading_entry(reading_db, dir_path, book_title):
+def delete_reading_entry(reading_db, data_directory, book_title):
     """Removes a reading entry
 
     Args:
         reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        dir_path {string} -- Path to directory containing the database csv's
+        data_directory {string} -- Path to database directory
         book_title {string} -- Title of book to filter for the reading entry
 
     Outputs:
@@ -504,28 +492,29 @@ def remove_reading_entry(reading_db, dir_path, book_title):
 
     remove_prompt = 'Which entry (index) would you like to remove?: '
     remove_options = filtered_db.index
-    index_to_remove = prompt_from_enum_options(remove_prompt, remove_options)
+    index_to_remove = prompt_from_choices(remove_options, remove_prompt,
+                                          zero_indexed=True)
     reading_db = reading_db.drop(index_to_remove)
 
     # Propogation to book database
-    propogate_to_book_db(reading_db, dir_path, book_title, 'remove')
+    propogate_to_book_db(reading_db, data_directory, book_title, 'remove')
 
     return(reading_db)
 
 
-def update_reading_db(mode, dir_path):
+def update_reading_db(mode, data_directory):
     """Main function to update book database
 
     Args:
         args {object} -- object containing command line arguments
-        dir_path {string} -- Path to the data directory
+        data_directory {string} -- Path to the data directory
 
     Outputs:
         Saves an updated reading database as a csv to the disk
     """
 
     # Read in reading database
-    reading_db_path = dir_path + '/reading.csv'
+    reading_db_path = data_directory + '/reading.csv'
     reading_db = pd.read_csv(reading_db_path)
 
     # Requires additional formatting for dates
@@ -539,23 +528,25 @@ def update_reading_db(mode, dir_path):
             print('An entry for {} already exists.'.format(title))
             switch_prompt = 'Would you like to edit an entry instead?'
             if confirm(switch_prompt):
-                reading_db = edit_reading_entry(reading_db, dir_path, title)
+                reading_db = edit_reading_entry(reading_db, data_directory,
+                                                title)
             else:
-                reading_db = add_reading_entry(reading_db, dir_path, title)
+                reading_db = add_reading_entry(reading_db, data_directory,
+                                               title)
         else:
-            reading_db = add_reading_entry(reading_db, dir_path, title)
+            reading_db = add_reading_entry(reading_db, data_directory, title)
     elif mode == 'edit':
-        reading_db = edit_reading_entry(reading_db, dir_path, title)
+        reading_db = edit_reading_entry(reading_db, data_directory, title)
     else:
-        reading_db = remove_reading_entry(reading_db, dir_path, title)
+        reading_db = delete_reading_entry(reading_db, data_directory, title)
 
     reading_db.sort_values(['Finish', 'Start'], na_position='last',
                            inplace=True)
     reading_db.to_csv(reading_db_path, index=False)
 
 
-def management_module(db_select, mode, dir_path):
+def management_module(db_select, mode, data_directory):
     if db_select == 'books':
-        update_books_db(mode, dir_path)
+        update_books_db(mode, data_directory)
     else:
-        update_reading_db(mode, dir_path)
+        update_reading_db(mode, data_directory)

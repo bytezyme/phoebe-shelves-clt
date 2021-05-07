@@ -18,22 +18,22 @@ def main():
     configs = read_configs(config_path)
     args = arg_parser()
 
-    if args.action == 'init':
+    if args.tool == 'init':
         if args.path:
             configs = update_data_dir(config_path, configs, args.path)
         init_module(args.force, configs.get('PATHS', 'data_directory'))
 
-    elif args.action == 'config':
+    elif args.tool == 'config':
         if args.check:
             print('Data Directory: ', configs.get('PATHS', 'data_directory'))
         elif args.path:
             update_data_dir(config_path, configs, args.path)
 
-    elif args.action == 'view':
+    elif args.tool == 'view':
         view_module(args.database, args.mode,
                     configs.get('PATHS', 'data_directory'))
 
-    elif args.action == 'manage':
+    elif args.tool == 'manage':
         management_module(args.database, args.mode,
                           configs.get('PATHS', 'data_directory'))
 

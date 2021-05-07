@@ -14,7 +14,7 @@ def arg_parser():
                                                  'book/reading database')
 
     subparsers = parser.add_subparsers(help="Top-level commands",
-                                       dest='action')
+                                       dest='tool')
 
     # Add subparsers
     add_init_parser(subparsers)

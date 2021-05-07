@@ -4,8 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from ..utils.inputs import prompt_from_enum_dict, prompt_from_enum_options
 from ..utils.inputs import prompt_for_pos_int, prompt_for_date, confirm
+from ..utils.inputs import prompt_from_choices
 
 
 def print_db(db, db_type):
@@ -52,8 +52,8 @@ def numerical_threshold_filter(db, col_select):
 
     threshold_prompt = ('Would you like to filter based on [1] ≥ threshold'
                         ', [2] ≤ threshold, or a [3] range?: ')
-    threshold_opts = {1, 2, 3}
-    threshold_mode = prompt_from_enum_options(threshold_prompt, threshold_opts)
+    threshold_choices = [1, 2, 3]
+    threshold_mode = prompt_from_choices(threshold_choices, threshold_prompt)
 
     lower_thresh_prompt = 'What\'s the smallest value (inclusive)?: '
     upper_thresh_prompt = 'What\'s the largest value (inclusive)?: '
@@ -92,8 +92,8 @@ def date_filter(db, col_select):
     mode_prompt = ('Would you like to filter based on [1] an earliest date, '
                    '[2] a latest date, [3] a range of dates, or [4] a '
                    'specific year?: ')
-    mode_opts = {1, 2, 3, 4}
-    mode = prompt_from_enum_options(mode_prompt, mode_opts)
+    mode_choices = [1, 2, 3, 4]
+    mode = prompt_from_choices(mode_choices, mode_prompt)
 
     earliest_prompt = 'What\'s the earliest date you want to see?: '
     latest_prompt = 'What\'s the latest date you want to see?: '
@@ -132,9 +132,7 @@ def books_filter(db):
     """
 
     cols = db.columns.drop(['Author FN', 'Author MN', 'Author LN'])
-    cols_index = list(range(1, len(cols) + 1))
-    cols_dict = dict(zip(cols_index, cols))
-    col_select = prompt_from_enum_dict(cols_dict)
+    col_select = prompt_from_choices(cols)
 
     numeric_cols = {'Length', 'Times Read', 'Rating'}
 
@@ -149,9 +147,7 @@ def books_filter(db):
         else:
             values = db[col_select].sort_values().unique()
 
-        values_index = list(range(1, len(values) + 1))
-        values_dict = dict(zip(values_index, values))
-        values_select = prompt_from_enum_dict(values_dict)
+        values_select = prompt_from_choices(values)
 
         if pd.isna(values_select):
             db = db[pd.isna(db[col_select])]
@@ -172,28 +168,22 @@ def reading_filter(db):
         db {DataFrame} -- Database filtered based on user-given thresholds
     """
 
-    cols = db.columns
-    cols_index = list(range(1, len(cols) + 1))
-    cols_dict = dict(zip(cols_index, cols))
-    col_select = prompt_from_enum_dict(cols_dict)
+    col_select = prompt_from_choices(db.columns)
 
     # Categorical, so get unique values and select from them
-    if col_select in {'Title'}:
+    if col_select == 'Title':
         print('Choose the option from the list below: \n')
-        values = db[col_select].sort_values().unique()
-        values_index = list(range(1, len(values) + 1))
-        values_dict = dict(zip(values_index, values))
-        values_select = prompt_from_enum_dict(values_dict)
-        db = db[db[col_select] == values_select]
+        titles = db[col_select].sort_values().unique()
+        title_select = prompt_from_choices(titles)
+        db = db[db[col_select] == title_select]
     elif col_select in {'Start', 'Finish'}:
         db = date_filter(db, col_select)
     else:
         db = numerical_threshold_filter(db, col_select)
-
     return(db)
 
 
-def graphing_module(db, db_select, dir_path):
+def graphing_module(db, db_select, data_directory):
     """ Graphing module for data
 
     # TODO: Figure out best way to implement proper visualization
@@ -215,10 +205,10 @@ def graphing_module(db, db_select, dir_path):
         ax2.plot(db_finish.index, db_finish['CSum'])
         ax.xaxis.set_major_locator(mdates.MonthLocator())
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
-        plt.savefig(dir_path + '/test.png')
+        plt.savefig(data_directory + '/test.png')
 
 
-def aggregation_module(db, db_select, dir_path):
+def aggregation_module(db, db_select, data_directory):
     """
     TODO: Finish cleaning up reading db data aggregation
     """
@@ -241,7 +231,7 @@ def aggregation_module(db, db_select, dir_path):
         drop_list = ['Rating_x', 'Rating_y', 'Start', 'Reading Time',
                      'Author', 'Author FN', 'Author MN', 'Author LN',
                      'Times Read', 'Genre']
-        books_db = pd.read_csv(dir_path + '/books.csv')
+        books_db = pd.read_csv(data_directory + '/books.csv')
         merged_db = db.merge(books_db, on='Title').drop(columns=drop_list)
 
         merged_db['Finish'] = pd.to_datetime(merged_db['Finish'])
@@ -252,7 +242,7 @@ def aggregation_module(db, db_select, dir_path):
         print('\n' + merged_db.to_markdown(tablefmt='grid', index=False) + '\n')
 
 
-def view_module(db_select, mode, dir_path):
+def view_module(db_select, mode, data_directory):
     """Top-level flow to view databases
 
     Args:
@@ -265,7 +255,7 @@ def view_module(db_select, mode, dir_path):
     """
 
     # Read in selected database
-    db_path = dir_path + '/{}.csv'.format(db_select)
+    db_path = data_directory + '/{}.csv'.format(db_select)
     db = pd.read_csv(db_path)
 
     # Update column types if needed
@@ -283,6 +273,6 @@ def view_module(db_select, mode, dir_path):
     if mode == 'table':
         print_db(db, db_select)
     elif mode == 'chart':
-        graphing_module(db, db_select, dir_path)
+        graphing_module(db, db_select, data_directory)
     else:
-        aggregation_module(db, db_select, dir_path)
+        aggregation_module(db, db_select, data_directory)
