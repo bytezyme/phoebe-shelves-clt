@@ -129,7 +129,7 @@ def prompt_for_date(prompt):
             print('Cannot parse the input as a date. Please try again.')
 
 
-def prompt_for_yes(prompt):
+def confirm(prompt, sep=':'):
     """Prompts user with a yes/no prompt
 
     Args:
@@ -138,11 +138,13 @@ def prompt_for_yes(prompt):
     Outputs:
         selection {bool} -- True if user passes 'Y' (yes)
     """
-    selection = input(prompt).upper()
+    final_prompt = prompt + '[y/N]{} '.format(sep)
+    selection = input(final_prompt).upper()
 
-    while selection not in {'Y', 'N'}:
-        selection = input('Please choose [Y/N]')
-    return(selection == 'Y')
+    while selection not in {'Y', 'N', 'YES', 'NO'}:
+        print("Error: invalid input")
+        selection = input(final_prompt).upper()
+    return(selection in {'Y', 'YES'})
 
 
 def select_database(args, dir_path):

@@ -121,6 +121,7 @@ def date_filter(db, col_select):
 
     return(db)
 
+
 def books_filter(db):
     """Filter books database based on user input
 
@@ -217,6 +218,7 @@ def graphing_module(db, db_select, dir_path):
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
         plt.savefig(dir_path + '/test.png')
 
+
 def aggregation_module(db, db_select, dir_path):
     """
     TODO: Finish cleaning up reading db data aggregation
@@ -284,7 +286,7 @@ def view_module(database, view_mode, dir_path):
 
     # Step 4: Process into final form and visualize
 
-    if view_mode == 'print':
+    if view_mode == 'table':
         print_db(db, database)
     elif view_mode == 'graph':
         graphing_module(db, database, dir_path)

@@ -21,16 +21,13 @@ def create_database(path, name, cols, force_overwrite):
     Returns:
         Saves an empty database with appropriate column names to path
     """
-    
+
     db_exists = os.path.isfile(path)
 
     if db_exists and not force_overwrite:
-        confirm_prompt = ("{} database already exists. Would you like to overwrite "
-                          "the existsing database?".format(name.title()))
-        if click.confirm(confirm_prompt):
-            create_db = True
-        else:
-            create_db = False
+        prompt = ("{} database already exists. Would you like to overwrite "
+                  "the existsing database?".format(name.title()))
+        create_db = click.confirm(prompt)
     else:
         create_db = True
 
@@ -49,7 +46,6 @@ def init_module(force_overwrite, data_directory):
         data_directory {string} -- Path to the data directory
 
     Returns:
-        Prints out status of the process
         Writes empty reading and book databases to the data_directory
     """
 

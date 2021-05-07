@@ -2,28 +2,12 @@
 
 import pandas as pd
 import numpy as np
+import click
 
 from .view import print_db_title
 
 from ..utils.input import prompt_from_enum_options, prompt_from_enum_dict
-from ..utils.input import prompt_for_yes, prompt_for_date
-from ..utils.input import gen_enum_dict_from_list
-
-""" Common Functions """
-
-
-def select_mode():
-    """Requests user to select an update mode
-
-    Outputs:
-        update_mode {int} -- Indicates which of 3 update modes was selected
-    """
-
-    prompt = ('Do you want to [1] add a new entry, [2] edit a current '
-              'entry, or [3] delete an entry?: ')
-    options = {1, 2, 3}
-    modes = {1: 'add', 2: 'edit', 3: 'delete'}
-    return(modes[prompt_from_enum_options(prompt, options)])
+from ..utils.input import prompt_for_date, gen_enum_dict_from_list
 
 
 def prompt_for_title(db, update_mode):
@@ -282,11 +266,11 @@ def remove_existing_book(books_db, book_title):
     return(books_db.drop(books_db[books_db['Title'] == book_title].index))
 
 
-def update_book_db(update_mode, db_directory):
+def update_book_db(update_mode, dir_path):
     """Main function to update book database
 
     Args:
-        args {object} -- object containing command line arguments
+        update_mode {string} -- Add/edit/delete mode
         db_directory {string} -- Path to the data directory
 
     Outputs:
@@ -294,10 +278,9 @@ def update_book_db(update_mode, db_directory):
     """
 
     # Read in saved database
-    db_path = db_directory + '/books.csv'
-    books_db = pd.read_csv(db_path)
+    books_db_path = dir_path + '/books.csv'
+    books_db = pd.read_csv(books_db_path)
 
-    # Select Mode
     book_title = prompt_for_title(books_db, update_mode)
 
     if update_mode == 'add':
@@ -308,10 +291,9 @@ def update_book_db(update_mode, db_directory):
             print('The database only supports one entry per title. Adding '
                   'an entry will result in overwriting the previous data.')
             switch_prompt = ('Would you like to edit the existing entry '
-                             'instead [Y/N]?: ')
-            switch_to_edit = prompt_for_yes(switch_prompt)
+                             'instead?')
 
-            if switch_to_edit:
+            if click.confirm(switch_prompt):
                 books_db = edit_existing_book(books_db, book_title)
             else:
                 books_db.drop(books_db[books_db['Title'] == book_title].index,
@@ -327,7 +309,7 @@ def update_book_db(update_mode, db_directory):
     # Sort books by author last name
     books_db = books_db.sort_values(by=['Author LN', 'Title'],
                                     ignore_index=True)
-    books_db.to_csv(db_path, index=False)
+    books_db.to_csv(dir_path, index=False)
 
 
 def update_reading_time(start, finish):
@@ -538,7 +520,7 @@ def update_reading_db(update_mode, dir_path):
     """Main function to update book database
 
     Args:
-        args {object} -- object containing command line arguments
+        update_mode {string} -- Add/edit/delete mode
         dir_path {string} -- Path to the data directory
 
     Outputs:
@@ -553,19 +535,14 @@ def update_reading_db(update_mode, dir_path):
     reading_db['Start'] = pd.to_datetime(reading_db['Start']).dt.date
     reading_db['Finish'] = pd.to_datetime(reading_db['Finish']).dt.date
 
-    # Select Mode
-    # update_mode = args.mode if args.mode is not None else select_mode()
-    # print('Entering {} mode...'.format(update_mode))
-
     title = prompt_for_title(reading_db, update_mode)
 
     if update_mode == 'add':
         if title in reading_db['Title'].values:
             print('An entry for {} already exists.'.format(title))
-            switch_prompt = 'Would you like to edit an entry instead [Y/N]?: '
-            switch_to_edit = prompt_for_yes(switch_prompt)
+            switch_prompt = 'Would you like to edit an entry instead?'
 
-            if switch_to_edit:
+            if click.confirm(switch_prompt):
                 reading_db = edit_reading_entry(reading_db, dir_path, title)
             else:
                 reading_db = add_reading_entry(reading_db, dir_path, title)
@@ -581,8 +558,18 @@ def update_reading_db(update_mode, dir_path):
     reading_db.to_csv(reading_db_path, index=False)
 
 
-def management_module(database, mode, dir_path):
+def management_module(database, update_mode, dir_path):
+    """High-level function for managing a database.
+
+    Args:
+        database {string} -- Name of the database to edit
+        update_mode {string} -- Management mode
+        dir_path {string} -- Path to data directory
+
+    Outputs:
+        Calls helper functions to update a database
+    """
     if database == 'books':
-        update_book_db(mode, dir_path)
+        update_book_db(update_mode, dir_path)
     else:
-        update_reading_db(mode, dir_path)
+        update_reading_db(update_mode, dir_path)
