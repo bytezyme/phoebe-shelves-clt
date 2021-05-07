@@ -5,6 +5,21 @@ and updated configuration file to a given path using the configparser package.
 """
 
 import configparser
+import os
+
+
+def create_configs(config_path):
+    """
+    """
+
+    configs = configparser.ConfigParser()
+
+    # TODO: Have more generalized default data directory
+    configs['PATHS'] = {'data_directory': 'data'}  # Default
+
+    with open(config_path, 'w') as config_file:
+        configs.write(config_file)
+    return(configs)
 
 
 def read_configs(config_path):
@@ -17,12 +32,16 @@ def read_configs(config_path):
         configs {configparser} -- Configurations
     """
 
-    configs = configparser.ConfigParser()
-    configs.read(config_path)
+    if not os.path.isfile(config_path):
+        configs = create_configs(config_path)
+    else:
+        configs = configparser.ConfigParser()
+        configs.read(config_path)
+
     return(configs)
 
 
-def update_configs(config_path, update_dict):
+def update_data_dir(config_path, configs, new_path):
     """Update and save a configuration file.
 
     Args:
@@ -33,9 +52,7 @@ def update_configs(config_path, update_dict):
         Saves the updated configuration file to the specified location
     """
 
-    configs = configparser.ConfigParser()
-    for section, key_value_dict in update_dict.items():
-        configs[section] = key_value_dict
-
+    configs['PATHS']['data_directory'] = new_path
     with open(config_path, 'w') as config_file:
         configs.write(config_file)
+    return(configs)

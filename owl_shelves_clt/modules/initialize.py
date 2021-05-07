@@ -6,9 +6,10 @@ data directory.
 
 import os
 import pandas as pd
+from ..utils.inputs import confirm
 
 
-def create_database(path, name, cols, db_exists, force_overwrite):
+def create_database(path, name, cols, force_overwrite):
     """ Checks and creates the database as needed
 
     Args:
@@ -22,20 +23,20 @@ def create_database(path, name, cols, db_exists, force_overwrite):
         Saves an empty database with appropriate column names to path
     """
 
+    db_exists = os.path.isfile(path)
+
     if db_exists and not force_overwrite:
-        print('{} database already created. Pass -f to force overwrite '
-              'the current database.'.format(name.title()))
-        create_db = False
-    elif db_exists and force_overwrite:
-        print('Overwriting existing {} database...'.format(name))
-        create_db = True
+        prompt = ('The {} database already exists. Would you like to '
+                  'overwrite the existing database?'.format(name))
+        create_db = confirm(prompt)
     else:
-        print('Creating the {} database...'.format(name))
         create_db = True
 
     if create_db:
         pd.DataFrame(columns=cols).to_csv(path, index=False)
         print('Successfully created the {} database!'.format(name))
+    else:
+        print('Did not create the {} database'.format(name))
 
 
 def init_module(force_overwrite, data_directory):
@@ -50,19 +51,14 @@ def init_module(force_overwrite, data_directory):
         Writes empty reading and book databases to the data_directory
     """
 
-    print('Checking for data...')
     books_path = data_directory + '/books.csv'
     reading_path = data_directory + '/reading.csv'
 
     # Books Database
-    books_exists = os.path.isfile(books_path)
     books_cols = ['Title', 'Author', 'Author FN', 'Author MN',
                   'Author LN', 'Length', 'Times Read', 'Rating', 'Genre']
-    create_database(books_path, 'books', books_cols,
-                    books_exists, force_overwrite)
+    create_database(books_path, 'books', books_cols, force_overwrite)
 
     # Reading Database
-    reading_exists = os.path.isfile(reading_path)
     reading_cols = ['Title', 'Start', 'Finish', 'Reading Time', 'Rating']
-    create_database(reading_path, 'reading', reading_cols,
-                    reading_exists, force_overwrite)
+    create_database(reading_path, 'reading', reading_cols, force_overwrite)

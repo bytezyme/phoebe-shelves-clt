@@ -145,6 +145,18 @@ def prompt_for_yes(prompt):
     return(selection == 'Y')
 
 
+def confirm(prompt, sep=':'):
+    """Prompts the user with a yes/no prompt
+
+    """
+    final_prompt = prompt + ' [y/N]{} '.format(sep)
+    selection = input(final_prompt).upper()
+
+    while selection not in {'Y', 'N', 'YES', 'NO'}:
+        selection = input('Please choose [y/N]: ')
+    return(selection == 'Y' or selection == 'YES')
+
+
 def select_database(args, dir_path):
     if args.booksdb:
         db_select = 'books'

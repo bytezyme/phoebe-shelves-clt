@@ -2,51 +2,40 @@
 
 import os
 
-from .arg_parsing import arg_parser
-from .utils_config import read_configs, update_configs
-from .database_creation import init_module
-from .data_management import management_module
-from .data_view import view_module
+from .utils.arg_parsing import arg_parser
+from .modules.configure import read_configs, update_data_dir
+from .modules.initialize import init_module
+from .modules.manage import management_module
+from .modules.view import view_module
 
 
 def main():
     """Main program"""
 
     # TODO: This needs to be generalized for distirubtion
+    # Configuration and argument parsing
     config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
-
+    configs = read_configs(config_path)
     args = arg_parser()
 
     if args.action == 'init':
-
-        # Use the user-specified path if passed, otherwise use default
         if args.path:
-            new_configs = {'PATHS': {'data_directory': args.path}}
-            update_configs(config_path, new_configs)
-
-        # Initialize the databases
-        configs = read_configs(config_path)
-        init_module(args.force, configs.get('PATHS', 'data_directory'))
+            configs = update_data_dir(config_path, configs, args.path)
+            init_module(args.force, configs.get('PATHS', 'data_directory'))
 
     elif args.action == 'config':
         if args.check:
-            configs = read_configs(config_path)
-            print('Directory Path: ' + configs.get('PATHS', 'data_directory'))
-        else:
-            if args.directory:
-                new_configs = {'PATHS': {'data_directory': args.directory}}
-            else:
-                new_configs = {'PATHS': {'data_directory': 'data'}}
-
-            update_configs(config_path, new_configs)
+            print('Data Directory: ', configs.get('PATHS', 'data_directory'))
+        elif args.path:
+            update_data_dir(config_path, configs, args.path)
 
     elif args.action == 'view':
-        configs = read_configs(config_path)
-        view_module(args, configs.get('PATHS', 'data_directory'))
+        view_module(args.database, args.mode,
+                    configs.get('PATHS', 'data_directory'))
 
     elif args.action == 'manage':
-        configs = read_configs(config_path)
-        management_module(args, configs.get('PATHS', 'data_directory'))
+        management_module(args.database, args.mode,
+                          configs.get('PATHS', 'data_directory'))
 
 
 def cli_entry_point():

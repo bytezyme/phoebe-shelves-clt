@@ -3,11 +3,10 @@
 import pandas as pd
 import numpy as np
 
-from .data_view import print_db_title
-
-from .utils_input import prompt_from_enum_options, prompt_from_enum_dict
-from .utils_input import prompt_for_yes, prompt_for_date, select_database
-from .utils_input import gen_enum_dict_from_list
+from .view import print_db_title
+from ..utils.inputs import prompt_from_enum_options, prompt_from_enum_dict
+from ..utils.inputs import prompt_for_yes, prompt_for_date, select_database
+from ..utils.inputs import gen_enum_dict_from_list
 
 """ Common Functions """
 
@@ -282,7 +281,7 @@ def remove_existing_book(books_db, book_title):
     return(books_db.drop(books_db[books_db['Title'] == book_title].index))
 
 
-def update_book_db(args, db_directory):
+def update_books_db(mode, db_directory):
     """Main function to update book database
 
     Args:
@@ -297,13 +296,9 @@ def update_book_db(args, db_directory):
     db_path = db_directory + '/' + 'books.csv'
     books_db = pd.read_csv(db_path)
 
-    # Select Mode
-    update_mode = args.mode if args.mode is not None else select_mode()
-    print('Entering {} mode...'.format(update_mode))
+    book_title = prompt_for_title(books_db, mode)
 
-    book_title = prompt_for_title(books_db, update_mode)
-
-    if update_mode == 'add':
+    if mode == 'add':
 
         # Need to check case where book actually already exists
         if book_title in books_db['Title'].values:
@@ -322,7 +317,7 @@ def update_book_db(args, db_directory):
                 books_db = add_new_book(books_db, book_title)
         else:
             books_db = add_new_book(books_db, book_title)
-    elif update_mode == 'edit':
+    elif mode == 'edit':
         books_db = edit_existing_book(books_db, book_title)
     else:
         books_db = remove_existing_book(books_db, book_title)
@@ -537,7 +532,7 @@ def remove_reading_entry(reading_db, dir_path, book_title):
     return(reading_db)
 
 
-def update_reading_db(args, dir_path):
+def update_reading_db(mode, dir_path):
     """Main function to update book database
 
     Args:
@@ -556,13 +551,9 @@ def update_reading_db(args, dir_path):
     reading_db['Start'] = pd.to_datetime(reading_db['Start']).dt.date
     reading_db['Finish'] = pd.to_datetime(reading_db['Finish']).dt.date
 
-    # Select Mode
-    update_mode = args.mode if args.mode is not None else select_mode()
-    print('Entering {} mode...'.format(update_mode))
+    title = prompt_for_title(reading_db, mode)
 
-    title = prompt_for_title(reading_db, update_mode)
-
-    if update_mode == 'add':
+    if mode == 'add':
         if title in reading_db['Title'].values:
             print('An entry for {} already exists.'.format(title))
             switch_prompt = 'Would you like to edit an entry instead [Y/N]?: '
@@ -574,7 +565,7 @@ def update_reading_db(args, dir_path):
                 reading_db = add_reading_entry(reading_db, dir_path, title)
         else:
             reading_db = add_reading_entry(reading_db, dir_path, title)
-    elif update_mode == 'edit':
+    elif mode == 'edit':
         reading_db = edit_reading_entry(reading_db, dir_path, title)
     else:
         reading_db = remove_reading_entry(reading_db, dir_path, title)
@@ -584,9 +575,8 @@ def update_reading_db(args, dir_path):
     reading_db.to_csv(reading_db_path, index=False)
 
 
-def management_module(args, dir_path):
-    database_select = select_database(args, dir_path)
-    if database_select == 'books':
-        update_book_db(args, dir_path)
+def management_module(db_select, mode, dir_path):
+    if db_select == 'books':
+        update_books_db(mode, dir_path)
     else:
-        update_reading_db(args, dir_path)
+        update_reading_db(mode, dir_path)

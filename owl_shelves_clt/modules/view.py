@@ -4,9 +4,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from .utils_input import prompt_from_enum_dict, prompt_from_enum_options
-from .utils_input import prompt_for_pos_int, prompt_for_date, prompt_for_yes
-from .utils_input import select_database
+from ..utils.inputs import prompt_from_enum_dict, prompt_from_enum_options
+from ..utils.inputs import prompt_for_pos_int, prompt_for_date, prompt_for_yes
+from ..utils.inputs import select_database
 
 
 def print_db(db, db_type):
@@ -251,7 +251,7 @@ def aggregation_module(db, db_select, dir_path):
         print('\n' + merged_db.to_markdown(tablefmt='grid', index=False) + '\n')
 
 
-def view_module(args, dir_path):
+def view_module(db_select, mode, dir_path):
     """Top-level flow to view databases
 
     Args:
@@ -264,7 +264,6 @@ def view_module(args, dir_path):
     """
 
     # Step 1: Select which database to view
-    db_select = select_database(args, dir_path)
     db_path = dir_path + '/{}.csv'.format(db_select)
     db = pd.read_csv(db_path)
 
@@ -272,20 +271,6 @@ def view_module(args, dir_path):
     if db_select == 'reading':
         db['Start'] = pd.to_datetime(db['Start']).dt.date
         db['Finish'] = pd.to_datetime(db['Finish']).dt.date
-
-    # Step 2: Select View Mode
-    if args.mode is not None:
-        view_mode = args.mode
-    else:
-        view_mode_prompt = ('Would you like to [1] print to the console, [2] '
-                            'graph as a chart, or [3] analyze aggregate '
-                            'values?: ')
-        view_mode_opts = {1, 2, 3}
-        view_mode_dict = {1: 'print', 2: 'graph', 3: 'analyze'}
-        view_mode = prompt_from_enum_options(view_mode_prompt, view_mode_opts)
-        view_mode = view_mode_dict[view_mode]
-
-    print('Entering {} mode...'.format(view_mode))
 
     # Step 3: Filter data (if needed)
     to_filter_prompt = 'Would you like to search/filter the data first[Y/N]?: '
@@ -298,10 +283,9 @@ def view_module(args, dir_path):
             db = reading_filter(db)
 
     # Step 4: Process into final form and visualize
-
-    if view_mode == 'print':
+    if mode == 'table':
         print_db(db, db_select)
-    elif view_mode == 'graph':
+    elif mode == 'chart':
         graphing_module(db, db_select, dir_path)
     else:
         aggregation_module(db, db_select, dir_path)
