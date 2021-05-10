@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![Example image of Phoebe Shelves CLT in use](https://github.com/anthony-agbay/phoebe-shelves-clt/blob/main/img/owl-shelves-clt-example.png)
+![Example image of Phoebe Shelves CLT in use](https://github.com/anthony-agbay/phoebe-shelves-clt/blob/main/img/phoebe-shelves-clt-example.png)
 
 Phoebe Shelves is reading management tool based on 1) a book database and 2) a reading database. The command line tools provides tools for managing these databases as a pair of CSV files via the command line. Currently, the tools support the following actions:
 
