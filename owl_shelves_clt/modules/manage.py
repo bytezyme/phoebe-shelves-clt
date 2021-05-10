@@ -51,7 +51,7 @@ def prompt_for_property(property_list):
     """
 
     prop_to_update = prompt_from_choices(property_list)
-    update_prompt = 'What is the new {} value?: '.format(prop_to_update)
+    update_prompt = f'What is the new {prop_to_update} value?: '
 
     # Use date parser if 'Start' or 'Finish
     if prop_to_update == 'Start' or prop_to_update == 'Finish':
@@ -277,8 +277,8 @@ def update_books_db(mode, data_directory):
 
         # Need to check case where book actually already exists
         if book_title in books_db['Title'].values:
-            print('{} already exists in the database. Adding a new entry will '
-                  'will overwrite the existing data!'.format(book_title))
+            print(f'{book_title} already exists in the database. Adding a new '
+                  'entry will overwrite the existing data!')
             switch_prompt = ('Would you like to edit the existing entry '
                              'instead?')
             if confirm(switch_prompt):
@@ -385,7 +385,7 @@ def propogate_to_book_db(reading_db, data_directory, book_title, mode):
     else:
         # Add book first if it doesn't exist yet
         if not book_exists:
-            print('Cannot find {} in the books database.'.format(book_title))
+            print(f'Cannot find {book_title} in the books database.')
             print('Let\'s make a new entry...')
             books_db = add_new_book(books_db, book_title)
 
@@ -525,7 +525,7 @@ def update_reading_db(mode, data_directory):
 
     if mode == 'add':
         if title in reading_db['Title'].values:
-            print('An entry for {} already exists.'.format(title))
+            print(f'An entry for {title} already exists.')
             switch_prompt = 'Would you like to edit an entry instead?'
             if confirm(switch_prompt):
                 reading_db = edit_reading_entry(reading_db, data_directory,

@@ -25,15 +25,15 @@ def create_database(path, name, cols, force_overwrite):
     db_exists = os.path.isfile(path)
 
     if db_exists and not force_overwrite:
-        prompt = ('The {} database already exists. Would you like to '
-                  'overwrite the existing database?'.format(name))
+        prompt = (f'The {name} database already exists. Would you like to '
+                  'overwrite the existing database?')
         create_db = confirm(prompt)
     else:
         create_db = True
 
     if create_db:
         pd.DataFrame(columns=cols).to_csv(path, index=False)
-        print('Successfully created the {} database!'.format(name))
+        print(f'Successfully created the {name} database!')
 
 
 def init_module(force_overwrite, data_directory):

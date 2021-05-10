@@ -18,7 +18,7 @@ def prompt_from_choices(choices, prompt=None, zero_indexed=False):
         choices_index = list(range(1, len(choices) + 1))
 
     if prompt is None:
-        prompt = ['[{}] {}'.format(index, value)
+        prompt = [f'[{index}] {value}'
                   for index, value
                   in zip(choices_index, choices)]
         prompt = '\n'.join(prompt) + '\nSelection: '
@@ -93,10 +93,10 @@ def confirm(prompt, sep=': '):
 
     """
 
-    final_prompt = prompt + ' [y/N]{}'.format(sep)
+    final_prompt = prompt + f' [y/N]{sep}'
     selection = input(final_prompt).upper()
 
     while selection not in {'Y', 'N', 'YES', 'NO'}:
-        selection = input('Please choose [y/N]{}'.format(sep)).upper()
+        selection = input(f'Please choose [y/N]{sep}'.upper())
 
     return(selection == 'Y' or selection == 'YES')
