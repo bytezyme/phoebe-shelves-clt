@@ -1,10 +1,10 @@
-# Owl Shelves Command Line Tools
+# Phoebe Shelves Command Line Tools
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![Example image of Owl Shelves CLT in use](https://github.com/anthony-agbay/owl_shelves_clt/blob/main/img/owl-shelves-clt-example.png)
+![Example image of Phoebe Shelves CLT in use](https://github.com/anthony-agbay/phoebe-shelves-clt/blob/main/img/owl-shelves-clt-example.png)
 
-Owl Shelves is reading management tool based on 1) a book database and 2) a reading database. The command line tools provides tools for managing these databases as a pair of CSV files via the command line. Currently, the tools support the following actions:
+Phoebe Shelves is reading management tool based on 1) a book database and 2) a reading database. The command line tools provides tools for managing these databases as a pair of CSV files via the command line. Currently, the tools support the following actions:
 
 - Adding, editing, and removing entries from both databases
 - Automatic calculation of the time for each reading event (days)
@@ -23,7 +23,7 @@ The following provides an overview of how to use the script. Currently, the tool
 There are two types of tools: script configuration and database management.
 
 ```console
-$ owl_shelves_clt [tool] [arguments]
+$ phoebeshelves [tool] [arguments]
 ```
 
 At any point during the interactive prompts, you can utilize Ctrl-C or Ctrl-D to safely close the program without modifying any files.
@@ -32,7 +32,7 @@ At any point during the interactive prompts, you can utilize Ctrl-C or Ctrl-D to
 
 #### 1. Installing Dependencies
 
-Owl Shelves has the following dependencies:
+Phoebe Shelves has the following dependencies:
 
 - [pandas](https://pandas.pydata.org)
     - `pip install pandas`
@@ -47,16 +47,24 @@ Owl Shelves has the following dependencies:
     - `pip install tabulate`
     - `conda install tabulate`
 
-#### 2. Setting Up Configurations
+#### 2. Installing Script
 
-The script relies on a configuration file (`config.cfg`) located in the `owl_shelves_clt` folder. This configuration file only stores the path to the data directory that will store the CSV files. To setup the configuration file, you can use the included `config` tool:
+Because a public release on pip has not been completed, you will have to install the script manually. Once you have cloned the directory to your local computer, navigate to the directory on the command-line and install the package manually using the following line:
+
+```console
+pip install .
+```
+
+#### 3. Setting Up Configurations
+
+The script relies on a configuration file (`config.cfg`) located in the `phoebeshelves` folder. This configuration file only stores the path to the data directory that will store the CSV files. To setup the configuration file, you can use the included `config` tool:
 
 ```console
 // Initialize configuration using the default data directory path
-$ owl_shelves_clt config
+$ phoebeshelves config
 
 // Initialize configuration using a custom data directory path
-$ owl_shelves_clt config -u [path_to_custom_directory]
+$ phoebeshelves config -u [path_to_custom_directory]
 ```
 
 To modify the path afterwards, use the second option above.
@@ -66,13 +74,13 @@ To modify the path afterwards, use the second option above.
 Once you are done configuring the data directory path, the next step is to initialize the CSV files. This can be done via the following:
 
 ```console
-$ owl_shelves_clt init
+$ phoebeshelves init
 ```
 
 If there is already an existing `books.csv` or `reading.csv` in the target directory, it ask you to confirm if you would like to overwrite the files. If you want to overwrite existing files without confirmation, pass the `-f` flag.
 
 ```sh-session
-$ owl_shelves_clt init -f
+$ phoebeshelves init -f
 ```
 
 ### Viewing and Managing the Databases
@@ -80,9 +88,9 @@ $ owl_shelves_clt init -f
 There are two primary tools for working with the databases: "view" and "manage" mode. The modes can be quickly activated by passing in the appropriate arguments:
 
 ```sh-session
-$ owl_shelves_clt view [database] [mode]
+$ phoebeshelves view [database] [mode]
 
-$ owl_shelves_clt manage [database] [mode]
+$ phoebeshelves manage [database] [mode]
 ```
 
 Each tool provides interactive prompts for the remainder of the script.
@@ -93,13 +101,13 @@ There are three primary modes for viewing the database: 1) printing a table to t
 
 ```sh-session
 // Printing the books database as a table
-$ owl_shelves_clt view books table
+$ phoebeshelves view books table
 
 // Generating charts of the reading database
-$ owl_shelves_clt view reading charts
+$ phoebeshelves view reading charts
 
 // Calculate summary stats of the reading database
-$ owl_shelves_clt view reading stats
+$ phoebeshelves view reading stats
 ```
 
 For all modes, you will be prompted to optionally filter the database based on the column data, such as the start or finish date in the reading database. If decide to filter a database, this filtered database will be used for the remainder of the script rather than the original database.
@@ -110,11 +118,11 @@ There are three primary actions for managing the database: 1) adding a new entry
 
 ```sh-session
 // Add new entry to the books database
-$ owl_shelves_clt manage books add
+$ phoebeshelves manage books add
 
 // Edit an entry in the books database
-$ owl_shelves_clt manage books edit
+$ phoebeshelves manage books edit
 
 // Delete an entry in the reading database
-$ owl_shelves_clt manage reading delete
+$ phoebeshelves manage reading delete
 ```

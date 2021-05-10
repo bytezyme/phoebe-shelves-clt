@@ -93,10 +93,10 @@ def confirm(prompt, sep=': '):
 
     """
 
-    final_prompt = prompt + f' [y/N]{sep}'
+    final_prompt = f'{prompt} [y/N]{sep}'
     selection = input(final_prompt).upper()
 
     while selection not in {'Y', 'N', 'YES', 'NO'}:
-        selection = input(f'Please choose [y/N]{sep}'.upper())
+        selection = input(f'Please choose [y/N]{sep}').upper()
 
     return(selection == 'Y' or selection == 'YES')

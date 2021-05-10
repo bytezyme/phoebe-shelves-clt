@@ -257,7 +257,7 @@ def view_module(db_select, mode, data_directory):
     """
 
     # Read in selected database
-    db_path = data_directory + f'/{db_select}.csv'
+    db_path = f'{data_directory}/{db_select}.csv'
     db = pd.read_csv(db_path)
 
     # Update column types if needed
