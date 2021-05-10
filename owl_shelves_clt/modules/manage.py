@@ -7,7 +7,7 @@ from .view import print_db_title
 from ..utils.inputs import confirm, prompt_for_date, prompt_from_choices
 
 
-def prompt_for_title(db, update_mode):
+def prompt_for_title(db, mode):
     """Request user to enter an acceptable book title
 
     Adding a book can accept any potential title. There are custom actions to
@@ -18,7 +18,7 @@ def prompt_for_title(db, update_mode):
 
     Args:
         db {DataFrame} -- DataFrame of books or reading entries
-        update_mode {Int} -- [1] Add, [2] Edit, or [3] Remove
+        mode {Int} -- [1] Add, [2] Edit, or [3] Remove
 
     Outputs:
         book_title {string} -- Title of the book to use
@@ -26,7 +26,7 @@ def prompt_for_title(db, update_mode):
 
     book_title = book_title = input('Please enter the book title: ')
 
-    if update_mode == 'add':
+    if mode == 'add':
         return(book_title)
     else:
         while book_title not in db['Title'].values:
@@ -260,7 +260,7 @@ def update_books_db(mode, data_directory):
     """Main function to update book database
 
     Args:
-        args {object} -- object containing command line arguments
+        mode {string} -- Update mode
         data_directory {string} -- Path to the data directory
 
     Outputs:
@@ -506,7 +506,7 @@ def update_reading_db(mode, data_directory):
     """Main function to update book database
 
     Args:
-        args {object} -- object containing command line arguments
+        mode {string} -- Update mode
         data_directory {string} -- Path to the data directory
 
     Outputs:

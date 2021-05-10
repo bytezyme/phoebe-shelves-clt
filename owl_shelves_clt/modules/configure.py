@@ -9,7 +9,13 @@ import os
 
 
 def create_configs(config_path):
-    """
+    """Initialize configuration file
+
+    Args:
+        config_path {string} -- Path to configuration file
+
+    Outputs:
+        configs {configparser} -- Configurations
     """
 
     configs = configparser.ConfigParser()
@@ -46,10 +52,12 @@ def update_data_dir(config_path, configs, new_path):
 
     Args:
         config_path {string} -- Path to configuration file location
-        update_dict {dict} -- Dict containing updates in correct format
+        configs {configparser} -- Configurations
+        new_path {string} -- New data directory path
 
     Outputs:
-        Saves the updated configuration file to the specified location
+        configs -- Configurations with updated data directory path
+        Also aves the updated configuration file to the specified location
     """
 
     configs['PATHS']['data_directory'] = new_path

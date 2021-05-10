@@ -38,26 +38,6 @@ def prompt_from_choices(choices, prompt=None, zero_indexed=False):
             print('Please enter one of the valid options.\n')
 
 
-def prompt_for_int(prompt):
-    """Prompt user to input an integer
-
-    This method requires the user to enter a valid integer. The user is
-    prompted until a valid integer is passed.
-
-    Args:
-        prompt {string} -- Prompt user sees on the command line
-
-    Outputs:
-        {int} -- Validated integer from user input
-    """
-
-    while True:
-        try:
-            return(int(input(prompt)))
-        except ValueError:
-            print('Please enter a valid integer.\n')
-
-
 def prompt_for_pos_int(prompt):
     """Prompt user to input a positive integer
 

@@ -8,17 +8,18 @@ from ..utils.inputs import prompt_for_pos_int, prompt_for_date, confirm
 from ..utils.inputs import prompt_from_choices
 
 
-def print_db(db, db_type):
+def print_db(db, db_select):
     """Print database as formatted markdown table
 
     Args:
-        db_path {string} -- Path to data directory
+        db {DataFrame} -- Database
+        db_select {string} -- Indicates what database 'db' is
 
     Outputs:
         Prints formatted version of Pandas database to the terminal
     """
 
-    if (db_type == 'books'):
+    if (db_select == 'books'):
         db = db.drop(['Author FN', 'Author MN', 'Author LN'], axis='columns')
 
     print('\n' + db.to_markdown(tablefmt='grid', index=False) + '\n')
@@ -29,7 +30,7 @@ def print_db_title(db, book_title):
 
     Args:
         db {DataFrame} -- Books or reading database as a pandas DataFrame
-        book_title -- Title of book to filter on
+        book_title {string} -- Title of book to filter on
 
     Outputs:
         Prints formatted list (with index) of entires containing the book title
@@ -246,8 +247,9 @@ def view_module(db_select, mode, data_directory):
     """Top-level flow to view databases
 
     Args:
-        args {Argparser} -- Command line arguments
-        dir_path {string} -- Path to database directory
+        db_select {string} -- Indicates which database to work with
+        mode {string} -- Indicates which view mode to use
+        data_directory {string} -- Path to data directory
 
     Outputs:
         1. Prints a database as a table view to the command line

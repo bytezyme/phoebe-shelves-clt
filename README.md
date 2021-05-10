@@ -71,15 +71,15 @@ $ owl_shelves_clt init
 
 If there is already an existing `books.csv` or `reading.csv` in the target directory, it ask you to confirm if you would like to overwrite the files. If you want to overwrite existing files without confirmation, pass the `-f` flag.
 
-```console
-owl_shelves_clt init -f
+```sh-session
+$ owl_shelves_clt init -f
 ```
 
 ### Viewing and Managing the Databases
 
 There are two primary tools for working with the databases: "view" and "manage" mode. The modes can be quickly activated by passing in the appropriate arguments:
 
-```console
+```sh-session
 $ owl_shelves_clt view [database] [mode]
 
 $ owl_shelves_clt manage [database] [mode]
@@ -91,7 +91,7 @@ Each tool provides interactive prompts for the remainder of the script.
 
 There are three primary modes for viewing the database: 1) printing a table to the command line, 2) generating charts of the database, and 3) generating summary statistics. **Currently, only printing the database is fully implemented.**
 
-```console
+```sh-session
 // Printing the books database as a table
 $ owl_shelves_clt view books table
 
@@ -108,7 +108,7 @@ For all modes, you will be prompted to optionally filter the database based on t
 
 There are three primary actions for managing the database: 1) adding a new entry, 2) editing an existing entry, and 3) deleting an existing entry.
 
-```console
+```sh-session
 // Add new entry to the books database
 $ owl_shelves_clt manage books add
 
