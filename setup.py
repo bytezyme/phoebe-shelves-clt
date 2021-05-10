@@ -7,11 +7,11 @@ setup(
     url="https://github.com/anthony-agbay/phoebe-shelves-clt",
     author="Anthony Agbay",
     author_email="aj.agbay@gmail.com",
-    packages=['phoebe_shelves_clt'],
+    packages=['phoebeshelvesclt'],
     zip_safe=False,
     entry_points={
         'console_scripts': [
-            'phoebeshelves = phoebe_shelves_clt.main:cli_entry_point'
+            'phoebeshelves = phoebeshelvesclt.main:cli_entry_point'
         ]
     }
 )
