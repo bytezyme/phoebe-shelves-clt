@@ -3,10 +3,10 @@
 import os
 
 from .utils.arg_parsing import arg_parser
-from .modules.configure import read_configs, update_data_dir
-from .modules.initialize import init_module
-from .modules.manage import management_module
-from .modules.view import view_module
+from .configure import read_configs, update_data_dir
+from .initialize import init_module
+from .manage import management_module
+from .view import view_module
 
 
 def main():

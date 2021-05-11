@@ -6,7 +6,7 @@ data directory.
 
 import os
 import pandas as pd
-from ..utils.inputs import confirm
+from .utils.inputs import confirm
 
 
 def create_database(path, name, cols, force_overwrite):

@@ -8,7 +8,11 @@ import pandas as pd
 import dateutil
 
 
-def prompt_from_choices(choices, prompt=None, zero_indexed=False):
+def prompt_from_choices(
+        choices,
+        prompt=None,
+        zero_indexed=False,
+        use_index=True):
     """Prompt from a list of choices"""
 
     # Get list of all of the options
@@ -26,16 +30,27 @@ def prompt_from_choices(choices, prompt=None, zero_indexed=False):
     while True:
         try:
             selection = int(input(prompt))
-            if selection not in choices_index:
-                raise ValueError
-
-            if zero_indexed:
-                return(choices[selection])
+            
+            # Check for valid input
+            if use_index:
+                if selection not in choices_index:
+                    raise ValueError
             else:
-                return(choices[selection - 1])
+                if selection not in choices:
+                    raise ValueError
 
         except ValueError:
             print('Please enter one of the valid options.\n')
+        else:
+            if use_index and zero_indexed:
+                return(choices[selection])
+            elif use_index and not zero_indexed:
+                return(choices[selection - 1])
+            elif not use_index and zero_indexed:
+                return(choices[list(choices).index(selection)])
+            else:
+                return(choices[list(choices).index(selection) - 1])
+
 
 
 def prompt_for_pos_int(prompt):

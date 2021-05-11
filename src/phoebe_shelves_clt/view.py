@@ -4,8 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from ..utils.inputs import prompt_for_pos_int, prompt_for_date, confirm
-from ..utils.inputs import prompt_from_choices
+from .utils.inputs import prompt_for_pos_int, prompt_for_date, confirm
+from .utils.inputs import prompt_from_choices
 
 
 def print_db(db, db_select):

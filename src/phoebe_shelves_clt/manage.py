@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 from .view import print_db_title
-from ..utils.inputs import confirm, prompt_for_date, prompt_from_choices
+from .utils.inputs import confirm, prompt_for_date, prompt_from_choices
 
 
 def prompt_for_title(db, mode):
@@ -453,7 +453,7 @@ def edit_reading_entry(reading_db, data_directory, book_title):
     edit_prompt = 'Which entry (index) would you like to edit?: '
     edit_options = filtered_db.index
     index_to_edit = prompt_from_choices(edit_options, edit_prompt,
-                                        zero_indexed=True)
+                                        zero_indexed=True, use_index=False)
 
     print('Which property would you like to edit?')
 
