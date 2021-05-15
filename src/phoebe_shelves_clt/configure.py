@@ -21,7 +21,12 @@ def create_configs(config_path):
     configs = configparser.ConfigParser()
 
     # TODO: Have more generalized default data directory
-    configs['PATHS'] = {'data_directory': 'data'}  # Default
+    configs["GENERAL"] = {"backend": "csv"}
+    configs["CSV"] = {"data_directory": "data"}  # Default
+    configs["SQL"] = {"database": "phoebe_shelves_dev",
+                      "user": "anthonyagbay",
+                      "host": "localhost",
+                      "export": "data"}
 
     with open(config_path, 'w') as config_file:
         configs.write(config_file)

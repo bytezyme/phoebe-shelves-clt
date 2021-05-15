@@ -55,7 +55,7 @@ def prompt_for_property(property_list):
 
     # Use date parser if 'Start' or 'Finish
     if prop_to_update == 'Start' or prop_to_update == 'Finish':
-        new_val = prompt_for_date(update_prompt)
+        _, new_val = prompt_for_date(update_prompt)
     elif prop_to_update == 'Rating':
         new_val = prompt_for_rating(update_prompt)
     else:
@@ -413,8 +413,8 @@ def add_reading_entry(reading_db, data_directory, book_title):
 
     # Get optional information
 
-    start_date = prompt_for_date('Start Date: ')
-    finish_date = prompt_for_date('End Date: ')
+    _, start_date = prompt_for_date('Start Date: ')
+    _, finish_date = prompt_for_date('End Date: ')
     rating = prompt_for_rating('Rating (1-5): ')
 
     # Create temporary entry object

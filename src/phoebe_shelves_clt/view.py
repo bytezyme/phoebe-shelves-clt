@@ -64,14 +64,14 @@ def numerical_threshold_filter(db, col_select):
     prompt_function = prompt_for_date if is_date else prompt_for_pos_int
 
     if threshold_mode == 1:
-        lower_thresh = prompt_function(lower_thresh_prompt)
+        _, lower_thresh = prompt_function(lower_thresh_prompt)
         db = db[db[col_select] >= lower_thresh]
     elif threshold_mode == 2:
         upper_thresh = prompt_function(upper_thresh_prompt)
         db = db[db[col_select] <= upper_thresh]
     else:
-        lower_thresh = prompt_function(lower_thresh_prompt)
-        upper_thresh = prompt_function(upper_thresh_prompt)
+        _, lower_thresh = prompt_function(lower_thresh_prompt)
+        _, upper_thresh = prompt_function(upper_thresh_prompt)
         upper_filter = db[col_select] <= upper_thresh
         lower_filter = db[col_select] >= lower_thresh
         db = db[upper_filter & lower_filter]
@@ -101,19 +101,19 @@ def date_filter(db, col_select):
     year_prompt = 'What year would you like to see?: '
 
     if mode == 1:
-        threshold = prompt_for_date(earliest_prompt)
+        _, threshold = prompt_for_date(earliest_prompt)
         db = db[db[col_select] >= threshold]
     elif mode == 2:
-        threshold = prompt_for_date(latest_prompt)
+        _, threshold = prompt_for_date(latest_prompt)
         db = db[db[col_select] >= threshold]
     elif mode == 3:
-        earliest_threshold = prompt_for_date(earliest_prompt)
-        latest_threshold = prompt_for_date(latest_prompt)
+        _, earliest_threshold = prompt_for_date(earliest_prompt)
+        _, latest_threshold = prompt_for_date(latest_prompt)
         earliest_filter = db[col_select] >= earliest_threshold
         latest_filter = db[col_select] <= latest_threshold
         db = db[earliest_filter & latest_filter]
     else:
-        year_threshold = prompt_for_date(year_prompt)
+        _, year_threshold = prompt_for_date(year_prompt)
         upper_threshold = year_threshold + pd.DateOffset(years=1)
         earliest_filter = db[col_select] >= year_threshold
         latest_filter = db[col_select] <= upper_threshold
