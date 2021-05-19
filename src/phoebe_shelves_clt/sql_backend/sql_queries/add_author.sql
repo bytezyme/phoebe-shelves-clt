@@ -1,0 +1,2 @@
+INSERT INTO authors({}) 
+VALUES({}) RETURNING id;

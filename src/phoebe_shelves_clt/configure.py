@@ -4,9 +4,8 @@ This module provides methods for reading in a configuration file and saving
 and updated configuration file to a given path using the configparser package.
 """
 
-import configparser
 import os
-
+import configparser
 
 def create_configs(config_path):
     """Initialize configuration file

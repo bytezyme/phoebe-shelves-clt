@@ -88,12 +88,12 @@ def prompt_for_pos_int(prompt):
             selection = int(input(prompt))
             if selection < 0:
                 raise ValueError
-            return(selection, selection)
+            return(selection)
         except ValueError:
             print('Please enter a positive integer.\n')
 
 
-def prompt_for_date(prompt):
+def prompt_for_date(prompt, as_string: bool = False):
     """Prompt user to input a date
 
     This method requires a user to enter a string that can be correctly
@@ -109,9 +109,13 @@ def prompt_for_date(prompt):
 
     while True:
         try:
-            date_string = input(prompt)
-            return(date_string, pd.to_datetime(date_string).date())
-        except(dateutil.parser._parser.ParserError, ValueError, OverflowError):
+            if as_string:
+                return(input(prompt))
+            else:
+                return(pd.to_datetime(input(prompt)).date())
+        except(dateutil.parser._parser.ParserError, # type: ignore
+               ValueError,
+               OverflowError):  
             print('Cannot parse the input as a date. Please try again.')
 
 

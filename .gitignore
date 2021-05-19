@@ -12,4 +12,3 @@ data/test.png
 
 # Development
 *.egg-info
-*.sql

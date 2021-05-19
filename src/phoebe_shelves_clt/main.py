@@ -1,54 +1,59 @@
 #!/usr/bin/env python
 
+""" Main program for running the command line tools
+
+TODO
+    * 
+"""
+
 import os
 
-from .utils.arg_parsing import arg_parser
-from .configure import read_configs, update_data_dir
-from .initialize import init_module, init_sql
-from .manage import management_module
-from .view import view_module
-from .sql.manage_sql import manage_sql
-from .sql.view_sql import view_sql
+from phoebe_shelves_clt.utils.arg_parsing import arg_parser
+from phoebe_shelves_clt import manage
+from phoebe_shelves_clt import initialize
+from phoebe_shelves_clt import view
+from phoebe_shelves_clt import configure
 
 
 def main():
-    """Main program"""
+    """ Main program"""
 
     # TODO: This needs to be generalized for distirubtion
-    # Configuration and argument parsing
     config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
-    configs = read_configs(config_path)
+    configs = configure.read_configs(config_path)
     args = arg_parser()
-    # Main Tools
-    #! Temporarily split
-    # TODO: Simplify once the sql backend is done
-    if configs.get("GENERAL", "backend") == "csv":
-        if args.tool == 'init':
-            if args.path:
-                configs = update_data_dir(config_path, configs, args.path)
-            init_module(args.force, configs.get('CSV', 'data_directory'))
-        elif args.tool == 'config':
-            if args.check:
-                print('Data Directory: ', configs.get('CSV', 'data_directory'))
-            elif args.path:
-                update_data_dir(config_path, configs, args.path)
-        if args.tool == "view":
-            view_module(args.database, args.mode,
-                        configs["CSV"]["data_directory"])
-        elif args.tool == "manage":
-            management_module(args.database, args.mode,
-                              configs["CSV"]["data_directory"])
+
+    # Configuration is not dependent on the backend, so can be treated separately
+    if args.tool == "config":
+        if args.check:
+            print('Data Directory: ', configs.get('CSV', 'data_directory'))
+        elif args.path:
+            configure.update_data_dir(config_path, configs, args.path)
+    
     else:
-        if args.tool == "init":
-            init_sql(args.force, dict(configs["SQL"]))
-        elif args.tool == "view":
-            view_sql(args.database, args.mode, dict(configs["SQL"]))
-        elif args.tool == "manage":
-            manage_sql(args.database, args.mode, dict(configs["SQL"]))
+        if configs.get("GENERAL", "backend") == "csv":
+            if args.tool == 'init':
+                if args.path:
+                    configs = configure.update_data_dir(config_path, configs, args.path)
+                initialize.init_module("csv", args.force, data_directory=configs.get('CSV', 'data_directory'))
+            elif args.tool == "view":
+                view.view_module("csv", args.database, args.mode, data_directory=configs["CSV"]["data_directory"])
+            elif args.tool == "manage":
+                manage.manage_module("csv", args.database, args.mode, data_directory=configs["CSV"]["data_directory"])
+        else:
+            if args.tool == "init":
+                initialize.init_module("sql", args.force,
+                                    sql_configs=dict(configs["SQL"]))
+            elif args.tool == "view":
+                view.view_module("sql", args.database, args.mode,
+                                sql_configs=dict(configs["SQL"]))
+            elif args.tool == "manage":
+                manage.manage_module("sql", args.database, args.mode,
+                                    sql_configs=dict(configs["SQL"]))
 
 
 def cli_entry_point():
-    """Entry point for a command line call"""
+    """ Entry point for a command line call"""
     try:
         main()
     except (KeyboardInterrupt, EOFError):
