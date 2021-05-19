@@ -4,16 +4,34 @@ This module provides common utility functions for accepting and validating
 user inputs via the input() method.
 """
 
+from typing import Any, List
+
 import pandas as pd
 import dateutil
 
 
 def prompt_from_choices(
-        choices,
-        prompt=None,
-        zero_indexed=False,
-        use_index=True):
-    """Prompt from a list of choices"""
+        choices: List[Any],
+        prompt: str = None,
+        zero_indexed: bool = False,
+        use_index: bool =True):
+    """ Prompt from a list of choices
+    
+    Prompt the user from a list of potential choices. You can retrieve either
+    the location of the choice in the initial choice list or use the
+    automatically-generated selection index number. You can also indicate
+    whether the choices should be presented starting at 0
+
+    Args:
+        choices: List of choices to present to the user
+        prompt: Optional prompt to be used instead of generating a full list
+        zero_indexed: Flag to indicate whether to use zero-indexing for options
+        use_index: Flag to indicate whether to select on the index or actual value
+
+    Returns:
+        Any: The selected value
+        Int: The location of the selected value in the provided list of choices
+    """
 
     # Get list of all of the options
     if zero_indexed:
@@ -22,10 +40,10 @@ def prompt_from_choices(
         choices_index = list(range(1, len(choices) + 1))
 
     if prompt is None:
-        prompt = [f'[{index}] {value}'
-                  for index, value
-                  in zip(choices_index, choices)]
-        prompt = '\n'.join(prompt) + '\nSelection: '
+        prompt_list = [f'[{index}] {value}'
+                       for index, value
+                       in zip(choices_index, choices)]
+        prompt = '\n'.join(prompt_list) + '\nSelection: '
 
     while True:
         try:

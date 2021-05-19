@@ -113,6 +113,6 @@ def add_db_parser(parser):
         Adds database selection argument to view or manage parser
     """
 
-    db_choices = ['books', 'reading']
-    db_help = 'Run tools on the [books] or [reading] database'
+    db_choices = ['books', 'reading', 'authors', 'genres', 'series']
+    db_help = 'Select which database to use the tools on'
     parser.add_argument("database", choices=db_choices, help=db_help)

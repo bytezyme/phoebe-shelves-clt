@@ -199,8 +199,8 @@ def graphing_module(db, db_select, data_directory):
 
         db_finish = db.groupby(pd.Grouper(key='Finish', freq='MS'))["Title"].count()
         db_finish = pd.DataFrame({'Monthly': db_finish.values, 'CSum': db_finish.cumsum()})
-        db_finish.index = db_finish.index.date
-        fig, ax = plt.subplots()
+        db_finish.index = db_finish.index.date  # type: ignore
+        _, ax = plt.subplots()
         ax.bar(db_finish.index, db_finish["Monthly"], align='center')
         ax2 = ax.twinx()
         ax2.plot(db_finish.index, db_finish['CSum'])

@@ -19,10 +19,6 @@ def main():
     config_path = os.path.dirname(os.path.abspath(__file__)) + '/config.cfg'
     configs = read_configs(config_path)
     args = arg_parser()
-
-    # Initialization and Configuration
-
-
     # Main Tools
     #! Temporarily split
     # TODO: Simplify once the sql backend is done
@@ -48,7 +44,7 @@ def main():
         elif args.tool == "view":
             view_sql(args.database, args.mode, dict(configs["SQL"]))
         elif args.tool == "manage":
-            manage_sql(args, configs)
+            manage_sql(args.database, args.mode, dict(configs["SQL"]))
 
 
 def cli_entry_point():

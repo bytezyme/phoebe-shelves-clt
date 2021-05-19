@@ -1,5 +1,6 @@
 #!usr/bin python
-from typing import List, Tuple
+from typing import List, Tuple, Dict
+import textwrap
 
 import psycopg2
 import sys
@@ -29,6 +30,43 @@ def connect_to_database(user: str, database: str):
         print(f"Successfully connected to the {database} database.")
         return(conn)
 
+def execute_query(conn, query: str, query_type: str):
+
+    # Setup error message
+    error_messages = {
+        "create_db": "Could not create database. See below for details.",
+        "create_table": "Could not create table. See below for details.",
+        "drop_table": "Could not drop table. See below for details.",
+        "to_list": "Query failed. See below for details.",
+        "to_df": "Query failed. See below for details.",
+        "modify": "Query failed. See below for details.",
+        "modify_return": "Query failed. See below for details.",
+        "basic": "Query failed. See below for details."
+    }
+
+    with conn.cursor() as cur:
+        try:
+            if query_type == "to_df":
+                temp_df = pd.read_sql(query, conn)
+            else:
+                cur.execute(query)
+        except Exception as err:
+            print(error_messages[query_type])
+            print(err)
+            sys.exit(1)
+        else:
+            if query_type == "to_df":
+                return(temp_df)  # type: ignore
+            elif query_type in {"create_db", "create_table", "drop_table", "modify"}:
+                conn.commit()
+            elif query_type in {"modify_return"}:
+                results = cur.fetchall()
+                conn.commit()
+                return(results)
+            elif query_type == "to_list":
+                return(cur.fetchall())
+            else:
+                pass
 
 def create_database(conn, db_name):
     """ Create new database
@@ -37,82 +75,92 @@ def create_database(conn, db_name):
         * Finish function documentation
     """
     query = f"create database {db_name}"
-    
-    with conn.cursor() as cur:
-        try:
-            cur.execute(query)
-        except Exception as err:
-            print("Creation failed. See below for exception.")
-            print(err.pgcode)
-            sys.exit(1)
-        else:
-            conn.commit()
+    execute_query(conn, query, "create_db")
 
+# Table Management
 
-def create_table(conn, query: str):
+def create_table(conn, query: str, table_name: str, force: bool):
     """ Create new table in database
 
     
     Todo:
         * Finish function documentation
     """
-    with conn.cursor() as cur:
-        try:
-            cur.execute(query)
-        except Exception as err:
-            print(err)
-            sys.exit(1)
-        else:
-            conn.commit()
+
+    if force:
+        drop_table(conn, table_name)
+    execute_query(conn, query, "create_table")
 
 def drop_table(conn, table_name: str):
     """ Drops a table if it exists in the database
     """
+    query = f"DROP TABLE IF EXISTS {table_name} CASCADE"
+    execute_query(conn, query, "drop_table")
 
-    with conn.cursor() as cur:
-        try:
-            cur.execute(f"DROP TABLE IF EXISTS {table_name} CASCADE")
-        except Exception as err:
-            print(err)
-            sys.exit(1)
-        else:
-            conn.commit()
+def retrieve_authors_list(conn) -> Dict[str, int]:
+    """ Retreive all authors in the authors table
 
-# Modify Tables
+    Retrieves all of the authors in the authors database and returns a dictionary
+    mapping form the author name to the author id
 
-# Query Tables
-
-def query_to_list(conn, query) -> List:
-    """ Run query and return all rows as Python list
-
-    Todo:
-        * Finish function documentation
+    Args:
+        conn (psycopg2.connection): Connection to PostgreSQL database
+    
+    Returns:
+        (dict): Dictionary mapping author to author_id
     """
 
-    with conn.cursor() as cur:
-        try:
-            cur.execute(query)
-        except Exception as err:
-            print("Query failed. See below for exception.")
-            print(err.pgcode)
-            sys.exit(1)
-        else:
-            return(cur.fetchall())
+    query = """
+    select
+        a.first_name || COALESCE(' ' || a.middle_name, '') || ' ' || a.last_name "Author",
+        id "Author ID"
+    from authors a
+    """
+    
+    return(dict(execute_query(conn, query, "to_list")))  # type: ignore
 
 
-def query_to_df(sql_query, conn) -> pd.DataFrame:
-    """ Runs a query and returns output as a DataFrame
+def retrieve_books_list(conn) -> Dict[str, int]:
+    """ Retreive all books in the books table
+
+    Retrieves all of the books in the books database and returns a dictionary
+    mapping from the title to the book id
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database
+    
+    Returns:
+        (dict): Dictionary mapping title to book_id
     """
 
-    try:
-        temp_df = pd.read_sql(sql_query, conn)
-    except Exception as err:
-        print("Query failed. See below for exception")
-        print(err)
-        sys.exit(1)
-    else:
-        return(temp_df)
+    query = """
+    select
+        b.title "Title",
+        id "Book ID"
+    from books b
+    """
+    return(dict(execute_query(conn, query, "to_list"))) # type: ignore
 
+def retrieve_genres_list(conn) -> Dict[str, int]:
+    """ Retieve all genres in the genres table
+
+    Retrieves all of the genres in the genres table and returns a dictionary
+    mapping from the genre name to the genre ID
+
+    Args:
+        con (psycopg2.connection): Connection to the PostgreSQL database
+
+    Returns:
+        (dict): Dictionary mapping genre to the genre_id
+    """
+
+    query = textwrap.dedent("""\
+                SELECT
+                    name "Genre",
+                    id "Genre ID"
+                FROM genres
+            """)
+    return(dict(execute_query(conn, query, "to_list")))  # type: ignore
 
 def query_books(filter: str = None, **kwargs) -> str:
     """ Generate SQL query for the books database
@@ -121,36 +169,51 @@ def query_books(filter: str = None, **kwargs) -> str:
     query = """
     create temp table books_friendly as (
         WITH 
-        reading_agg (book_id, times_read, avg_rating) AS (
-        SELECT
-            book_id,
-            COUNT(id) "times_read",
-            AVG(rating)::NUMERIC(10,1) "avg_rating"
-        FROM reading
-        GROUP BY book_id
-        ),
-        book_author_agg (book_id, authors) AS (
-        SELECT
-            ba.book_id,
-            string_agg(a.first_name || COALESCE(' ' || a.middle_name, '') || ' ' || a.last_name, ', ')
-        FROM book_author ba
-        INNER JOIN authors a
-            on ba.author_id = a.id {}
-        GROUP BY
-            ba.book_id
-        )
+            reading_agg (book_id, times_read, avg_rating) AS (
+            SELECT
+                book_id,
+                COUNT(id) "times_read",
+                AVG(rating)::NUMERIC(10,1) "avg_rating"
+            FROM reading
+            GROUP BY book_id
+            ),
+
+            books_authors_agg (book_id, authors) AS (
+            SELECT
+                ba.book_id,
+                string_agg(a.first_name || COALESCE(' ' || a.middle_name, '') || ' ' || a.last_name, ', ')
+            FROM books_authors ba
+            INNER JOIN authors a
+                on ba.author_id = a.id {}
+            GROUP BY
+                ba.book_id
+            ),
+
+            books_genres_agg (book_id, genres) AS (
+            SELECT
+                bg.book_id,
+                string_agg(g.name, ', ')
+            FROM books_genres bg
+            INNER JOIN genres g
+                on bg.genre_id = g.id
+            GROUP BY
+                bg.book_id
+            )
+
         SELECT
             b.title "Title",
             ba.authors "Author(s)",
             b.book_length "Pages",
             COALESCE(r.times_read, 0) "Times Read",
             COALESCE(r.avg_rating, b.rating::Numeric(10,1)) "Rating",
-            b.genre "Genre"
+            bg.genres "Genre"
         FROM books b
-        INNER JOIN book_author_agg ba
+        INNER JOIN books_authors_agg ba
             on b.id = ba.book_id
         LEFT JOIN reading_agg r
             on b.id = r.book_id
+        LEFT JOIN books_genres_agg bg
+            on b.id = bg.book_id
         {}
     );
     select * from books_friendly;
@@ -193,36 +256,36 @@ def query_books(filter: str = None, **kwargs) -> str:
         genre_list_string = ",".join([f"'{genre}'" for genre in kwargs["genre_list"]])
         return(query.format("", f"WHERE b.genre in ({genre_list_string})"))
 
-
 def query_reading(filter: str = None, **kwargs) -> str:
     query = """
     create temp table reading_friendly AS (
         WITH 
-            book_author_agg (book_id, authors) AS (
+            books_authors_agg (book_id, authors) AS (
             SELECT
                 ba.book_id,
                 string_agg(a.first_name || COALESCE(' ' || a.middle_name, '') || ' ' || a.last_name, ', ')
-            FROM book_author ba
+            FROM books_authors ba
             INNER JOIN authors a
                 on ba.author_id = a.id {}
             GROUP BY
                 ba.book_id
         )
         SELECT
+            r.id "ID",
             b.title "Title",
             ba.authors "Author(s)",
             r.start_date "Start",
-            r.end_date "Finish",
+            r.finish_date "Finish",
             r.rating "Rating",
-            r.end_date - r.start_date + 1 "Read Time"
+            r.finish_date - r.start_date + 1 "Read Time"
         FROM reading r
         INNER JOIN books b
             on r.book_id = b.id
-        INNER JOIN book_author_agg ba
+        INNER JOIN books_authors_agg ba
             on b.id = ba.book_id
         {}
         ORDER BY
-            r.end_date ASC NUllS Last
+            r.finish_date ASC NUllS Last
     );
 
     SELECT * from reading_friendly;
@@ -283,3 +346,8 @@ def query_reading(filter: str = None, **kwargs) -> str:
             filter_string += "is null"
 
         return(query.format("", filter_string))
+
+
+def read_query(name: str):
+    with open(f"src/phoebe_shelves_clt/utils/sql_queries/{name}.sql") as f:
+        return(f.read())

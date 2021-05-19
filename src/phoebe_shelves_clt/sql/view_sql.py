@@ -20,7 +20,7 @@ def print_table(conn, query: str):
         Prints result as formatted table to command line
 
     """
-    results = sql_api.query_to_df(query, conn)
+    results = sql_api.execute_query(conn, query, "to_df")
     print(results.to_markdown(tablefmt='grid', index=False))
 
 def retrieve_authors_list(conn) -> Dict[str, int]:
@@ -43,7 +43,7 @@ def retrieve_authors_list(conn) -> Dict[str, int]:
     from authors a
     """
     
-    return(dict(sql_api.query_to_list(conn, query)))
+    return(dict(sql_api.execute_query(conn, query, "to_list")))  #type: ignore
 
 def retrieve_books_list(conn) -> Dict[str, int]:
     """ Retreive all books in the books table
@@ -64,7 +64,7 @@ def retrieve_books_list(conn) -> Dict[str, int]:
         id "Book ID"
     from books b
     """
-    return(dict(sql_api.query_to_list(conn, query)))
+    return(dict(sql_api.execute_query(conn, query, "to_list")))  #type: ignore
 
 def retrieve_genre_list(conn) -> Dict[str, int]:
     """ Retrieve a list of genres in the genre table
@@ -82,7 +82,7 @@ def retrieve_genre_list(conn) -> Dict[str, int]:
         id "Genre ID",
     from genre
     """
-    return(dict(sql_api.query_to_list(conn, query)))
+    return(dict(sql_api.execute_query(conn, query, "to_list")))  #type: ignore
 
 def retrieve_columns(conn, table_name: str) -> Tuple[str]:
     """ Retrieve the columns of a table in the database
@@ -101,7 +101,7 @@ def retrieve_columns(conn, table_name: str) -> Tuple[str]:
     query = ("select column_name from information_schema.columns where "
               "table_name = '{}';".format(table_name))
 
-    result = sql_api.query_to_list(conn, query)
+    result = sql_api.execute_query(conn, query, "to_list")
     return(list(zip(*result))[0])
 
 
