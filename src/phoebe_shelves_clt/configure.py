@@ -32,8 +32,7 @@ def create_configs(config_path: str) -> configparser.ConfigParser:
 
     configs["SQL"] = {"database": "phoebeshelves",
                       "user": "postgres",
-                      "host": "localhost",
-                      "export": "data"}
+                      "host": "localhost"}
 
     with open(config_path, 'w') as config_file:
         configs.write(config_file)
