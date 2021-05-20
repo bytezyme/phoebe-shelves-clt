@@ -1,4 +1,4 @@
-"""Add, edit, or delete entries in the backend databases.
+""" Add, edit, or delete entries in the backend databases.
 
 This module provides the primary functionality for adding, editing, or
 deleting entries in the backend databases. The initial argument parsing methods
@@ -7,9 +7,13 @@ request from the user using interactive prompts.
 
     Typical usage example:
         manage_sql(args.database, args.mode, dict(configs["SQL"]))
+
+Todos:
+    * Add support for using the series table
+    * Add support for adding multiple authors/genres in the edit book function
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import numpy as np
 
@@ -17,34 +21,13 @@ from phoebe_shelves_clt.utils import sql_api
 from phoebe_shelves_clt.utils import inputs
 from phoebe_shelves_clt.sql_backend import view_sql
 from phoebe_shelves_clt.sql_backend import queries
+from phoebe_shelves_clt import manage
 
 
-### –------------ Mange Books --------------- ###
-
-def prompt_for_rating(prompt):
-    """Prompt user for an integer rating (max 5).
-
-    Args:
-        prompt {string} -- Prompt that user sees on the command line
-
-    Outputs:
-        rating {int} -- Intger rating or np.nan if empty string is passed
-
-    TODO:
-        * Merge with existing CSV implementation
-    """
-
-    rating = input(prompt)
-
-    while rating not in {'', '1', '2', '3', '4', '5'}:
-        rating = input('Choose an integer between 1 and 5 or leave blank: ')
-
-    # Format rating
-    rating = int(rating) if rating != "" else np.nan
-    return(rating)
+### ----------- Getting Details --------------- ###
 
 def prompt_for_title(conn) -> Tuple[str, Dict]:
-    """Prompt for a title from the books database and return query results.
+    """ Prompt for a title from the books database and return query results.
 
     Prompts the user to provide a title and returnsn the title and ID of any
     books that match the title *exactly*.
@@ -59,7 +42,7 @@ def prompt_for_title(conn) -> Tuple[str, Dict]:
         query_results (Dict[str, int]): Results as a dictionary mapping from
             the title to the ID..\
 
-    TODO:
+    Todos:
         * Merge with existing CSV implementation
     """
     title = input("Please enter the book title: ")
@@ -68,8 +51,77 @@ def prompt_for_title(conn) -> Tuple[str, Dict]:
                                                "to_list"))  # type: ignore
     return(title, query_results)
 
+
+def prompt_for_author(conn) -> Tuple[str, Dict]:
+    """ Prompt a user for the initial author information.
+
+    Prompts the user to input the last name of an author and returns
+    a list of possible matches based on the last name only.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+
+    Returns:
+        A tuple containing the following information:
+
+        last_name (str): Last name provided by the user
+        author_results: Dictionary mapping the names of possible author
+            matches to their author_id 
+
+    """
+    last_name = input("Please enter the author's last name: ")
+    author_query = (sql_api.read_query('author_filter').format(last_name))
+    author_results = dict(sql_api.execute_query(conn, author_query,
+                                                "to_list"))  # type: ignore
+    return(last_name, author_results)
+
+
+def prompt_for_genre(conn) -> Tuple[str, Dict]:
+    """ Prompt the user to select a genre
+
+    Prompts user to enter a genre name. It then retrieves the potential
+    matching options for further processing.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+
+    Returns:
+        A tuple containing the following information:
+
+        genre_name (str): Name of the genre provided by the user
+        genre_results (Dict): Dictionary mapping the names of potential genre
+            matches to their genre_id
+    """
+    genre_name = input("Please enter the genre name: ")
+    genre_query = f"SELECT name, id from genres where name ilike '{genre_name}'"
+    genre_results = dict(sql_api.execute_query(conn, genre_query,
+                                               "to_list"))  # type: ignore
+    return(genre_name, genre_results)
+
+
+def get_reading_entries(conn, book_id: int) -> List:
+    """ Retrieves reading entries associated with a book
+
+    Retrieves reading entries associated with a given book by filtering
+    the database based on the associated book ID.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        book_id: Book ID of the target book
+    """
+    query = f"SELECT id from reading where book_id = {book_id}"
+    results = list(zip(*sql_api.execute_query(conn, query, "to_list")))
+
+    if len(results) == 0:  # Sepcial case when no entries are in the table yet
+        return([])
+    else:
+        return(list(results[0]))
+
+
+### ------------- Selections ------------- ###
+
 def select_author(conn):
-    """Selects an author from the authors table and returns its ID.
+    """ Selects an author from the authors table and returns its ID.
 
     Prompts the user to begin providing author last name and compares
     it against existing authors. If there are now potentially existing authors,
@@ -96,8 +148,9 @@ def select_author(conn):
             author_id = author_results[author_select]
     return(author_id)
 
-def select_book(conn):
-    """Selects a book from the books table and returns its ID.
+
+def select_book(conn) -> Tuple[str, int]:
+    """ Selects a book from the books table and returns its ID.
 
     Prompts the user to provide an initial title and compares against existing
     books in the books table. If the book doesn't exist, the user can create a
@@ -111,8 +164,8 @@ def select_book(conn):
     Returns:
         A tuple containing the following information:
 
-        title (str): The title that the user provided.
-        book_id (int): Unique ID for the selected book.
+        title: The title that the user provided.
+        book_id: Unique ID for the selected book.
     """
     title, title_results = prompt_for_title(conn)
 
@@ -125,11 +178,11 @@ def select_book(conn):
             book_id = add_book(conn, title)
         else:
             book_id = title_results[title_select]
-    return(title, book_id)
+    return(title, book_id)  # type: ignore
         
 
 def select_genre(conn):
-    """Selects a genre from the genres table and returns its ID.
+    """ Selects a genre from the genres table and returns its ID.
 
     Prompts the user to select from the existing list of genres or to create
     a new genre.
@@ -153,26 +206,26 @@ def select_genre(conn):
 
     return(genre_id)
 
+
+### –------------ Mange Books ------------- ###
+
 def add_book(conn, title: str):
-    """Adds a new book to the database
+    """ Adds a new book to the database
 
     Adds a new book to the books table and new entries for all of the other 
     tables, as needed.
 
     Args:
         conn (psycopg2.connection): Connection to the PostgreSQL database.
-        title: Title of the new book
+        title: Title of the new book.
         
     Returns:
-        Adds entries to all appropriate tables in the database given the
-        information the user provided.
-
-        book_id (int): Unique ID of the new book entry
+        book_id (int): Unique ID of the new book entry.
     """
     # Prompting for additional properties
     author_id = select_author(conn)
     pages = inputs.prompt_for_pos_int("Page length: ")
-    rating = prompt_for_rating("Rating (1-5) (Optional): ")
+    rating = manage.prompt_for_rating("Rating (1-5) (Optional): ")
     genre_id = select_genre(conn)
 
     #! Does not need same approach as adding a reading entry because there are
@@ -197,6 +250,16 @@ def add_book(conn, title: str):
     return(book_id)
 
 def edit_book(conn, book_id: int):
+    """ Edit an existing entry in the books database
+
+    Prompts the user to 1) select a property to modify and 2) provide the
+    new value for the property. Then, it generates and executes the correct
+    update query to modify an existing book entry.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        book_id: ID of the book entry to modify.
+    """
     cols = ["Title", "Author", "Pages", "Rating", "Genre"]
     print("\nWhich author property would you like to modify?")
     col_select = inputs.prompt_from_choices(cols)
@@ -207,7 +270,9 @@ def edit_book(conn, book_id: int):
                                                          book_id)
     elif col_select == "Author":
         author_id = select_author(conn)
-        query = (f"UPDATE books_authors SET author_id = {author_id} where book_id = {book_id}")
+        query = sql_api.read_query("update_books_authors").format(author_id,
+                                                                  book_id)
+        query = query.format(author_id, book_id)
     
     elif col_select == "Pages":
         new_pages = inputs.prompt_for_pos_int("New page Length: ")
@@ -215,22 +280,41 @@ def edit_book(conn, book_id: int):
                                                           new_pages,
                                                           book_id)
     elif col_select == "Rating":
-        new_rating = prompt_for_rating("New rating (1-5): ")
+        new_rating = manage.prompt_for_rating("New rating (1-5): ")
         query = sql_api.read_query("update_book").format("rating",
                                                          new_rating,
                                                          book_id)
     elif col_select == "Genre":
         genre_id = select_genre(conn)
-        query = (f"UPDATE books_genres SET genre_id = {genre_id} where book_id = {book_id}")
+        query = sql_api.read_query("update_books_genres").format(genre_id,
+                                                                 book_id)
 
     sql_api.execute_query(conn, query, "modify") # type: ignore
 
 def delete_book(conn, book_id: int):
+    """ Delete a book entry from the books database
+
+    Deletes the book entry associated with a given book ID from the books
+    table. This deletion will cascade to all associated entries with the
+    book id as a foreign key.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        book_id: ID of the book entry to delte.
+    """
     query = f"DELETE FROM books where id = {book_id}"
     sql_api.execute_query(conn, query, "modify")
 
-def manage_books_table(conn, mode):
-    """
+def manage_books_table(conn, mode: str):
+    """ Parent function for managing the entries in the books table
+
+    Controls the execution of different management modes for the books table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        mode: Indicates whether to use the add, edit, or delete processes.
     """
     title, results = prompt_for_title(conn)
     
@@ -252,24 +336,27 @@ def manage_books_table(conn, mode):
         else:
             delete_book(conn, results[title])
 
+
 ### –------------ Mange Reading ------------- ###
 
+def add_reading_entry(conn, book_id: int) -> int:
+    """ Adds a new reading entry to the reading table
 
-def prompt_for_reading_entry(conn, book_id):
-    query = f"SELECT id from reading where book_id = {book_id}"
-    results = list(zip(*sql_api.execute_query(conn, query, "to_list")))
+    Prompts the user for information to add a new reading entry to the 
+    reading table. Then, generates the correct SQL query to insert a new
+    entry with the given information and returns the ID of the new entry
 
-    if len(results) == 0:  # Sepcial case when no entries are in the table yet
-        return([])
-    else:
-        return(list(results[0]))
-    return(list(results))
-
-def add_reading_entry(conn, book_id):
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        book_id: ID of the book to use for the new entry
+    
+    Returns:
+        The ID of the new reading entry
+    """
     print("Please enter the following optional information.")
     start = inputs.prompt_for_date("Start date: ", as_string=True)
     finish = inputs.prompt_for_date("Finish date: ", as_string=True)
-    rating = prompt_for_rating("Rating (1-5): ")
+    rating = manage.prompt_for_rating("Rating (1-5): ")
 
     cols_to_fill = ["book_id"]
     vals_to_fill = [str(book_id)]
@@ -286,53 +373,96 @@ def add_reading_entry(conn, book_id):
 
     cols_string = ", ".join(cols_to_fill)
     vals_string = ", ".join(vals_to_fill)
-
-    query = f"INSERT INTO reading({cols_string}) VALUES({vals_string}) RETURNING id"
-    return(sql_api.execute_query(conn, query, "modify_return")[0][0])
+    query = ("INSERT INTO reading({}) VALUES({}) "
+             "RETURNING id").format(cols_string, vals_string)
+    return(sql_api.execute_query(conn, query,
+                                 "modify_return")[0][0])  # type: ignore
     
 
-def edit_reading_entry(conn, title, id_list):
-    # id_str = "(" + ", ".join([str(id) for id in id_list]) + ")"
-    vis_query = f"SELECT * FROM reading_friendly rf where rf.\"Title\" ILIKE '{title}'"
+def edit_reading_entry(conn, title: str, id_list: List[int]):
+    """ Edit an existing entry in the reading table
+
+    Prompts the user to 1) select a property to modify and 2) provide the
+    new value for the property. Then, it generates and executes the correct
+    update query to modify an existing reading entry.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        title: Title of the book to filter reading entries for.
+        id_list: List of entry ID's associated with the given title
+    """
+    vis_query = ("SELECT * FROM reading_friendly rf where "
+                 "rf.\"Title\" ILIKE '{}'").format(title)
     view_sql.print_table(conn, vis_query)
     edit_id = inputs.prompt_from_choices(id_list, "Choose an entry to edit: ",
                                          zero_indexed=True, use_index=False)
+
     prop_opts = ["Title", "Start", "Finish", "Rating"]
     print("\nWhich property would you like to edit?")
     prop_select = inputs.prompt_from_choices(prop_opts)
 
     if prop_select == "Title":
         title, book_id = select_book(conn)
-        edit_query = f"UPDATE reading SET book_id = {book_id} where id = {edit_id}"
+        edit_query = sql_api.read_query("update_reading").format("book_id",
+                                                                 book_id,
+                                                                 edit_id)
+
     elif prop_select in {"Start", "Finish"}:
-        new_date = inputs.prompt_for_date(f"New {prop_select.lower()} date: ",
+        date = inputs.prompt_for_date(f"New {prop_select.lower()} date: ",
                                           as_string=True)
         col_name = "start_date" if prop_select == "Start" else "finish_date"
-        edit_query = f"Update reading SET {col_name} = '{new_date}' WHERE id = {edit_id}"
+        edit_query = sql_api.read_query("update_reading").format(col_name,
+                                                                 f"'{date}'",
+                                                                 edit_id)
+
     else:
-        new_rating = prompt_for_rating("New Rating: ")
-        edit_query = f"UPDATE reading SET rating = {new_rating} where id = {edit_id}"
+        new_rating = manage.prompt_for_rating("New Rating: ")
+        edit_query = sql_api.read_query("update_reading").format("rating",
+                                                                 new_rating,
+                                                                 edit_id)
 
     sql_api.execute_query(conn, edit_query, "modify")
 
 
 def delete_reading_entry(conn, title, id_list):
-    vis_query = f"SELECT * FROM reading_friendly rf where rf.\"Title\" ILIKE '{title}'"
+    """ Delete a book entry from the reading database
+
+    Deletes the reading entry associated with a given entry ID from the reading
+    table. This deletion will cascade to all associated entries with the
+    book id as a foreign key.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        title: Title of the book to filter on
+        id_list: List of entries associated with the title
+    """
+    vis_query = ("SELECT * FROM reading_friendly rf where "
+                 "rf.\"Title\" ILIKE '{}'").format(title)
     view_sql.print_table(conn, vis_query)
-    edit_id = inputs.prompt_from_choices(id_list, "Choose an entry to edit: ",
+    edit_id = inputs.prompt_from_choices(id_list, "Choose an entry to delete: ",
                                          zero_indexed=True, use_index=False)
     delete_query = f"DELETE FROM reading where id = {edit_id}"
     sql_api.execute_query(conn, delete_query, "modify")
 
 
 def manage_reading_table(conn, mode):
+    """ Parent function for managing the entries in the reading table
+
+    Controls the execution of different management modes for the reading table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        mode: Indicates whether to use the add, edit, or delete processes.
+    """
     # Load in temporary reading_friendly
     initial_load_query = queries.main_reading_query()
     sql_api.execute_query(conn, initial_load_query, "basic")
 
     # First select a valid book and filter the reading_entries
     title, book_id = select_book(conn)
-    entry_id_list = prompt_for_reading_entry(conn, book_id)
+    entry_id_list = get_reading_entries(conn, book_id)
 
     if mode == "add":
         if len(entry_id_list) == 0:  # type: ignore
@@ -348,24 +478,29 @@ def manage_reading_table(conn, mode):
         while len(entry_id_list) == 0:
             print(f"\"{title}\" does not have any associated reading entries.")
             title, book_id = select_book(conn)
-            entry_id_list = prompt_for_reading_entry(conn, book_id)
+            entry_id_list = get_reading_entries(conn, book_id)
         if mode == "edit":
             edit_reading_entry(conn, title, entry_id_list)
         else:
             delete_reading_entry(conn, title, entry_id_list)
 
+
 ### –------------ Mange Authors ------------- ###
 
-def prompt_for_author(conn):
-    last_name = input("Please enter the author's last name: ")
-    author_query = (sql_api.read_query('author_filter').format(last_name))
-    author_results = dict(sql_api.execute_query(conn, author_query, "to_list"))  # type: ignore
-    return(last_name, author_results)
+def add_author(conn, last_name: str) -> int:
+    """ Adds a new author to the author table
 
-def add_author(conn, last_name: str):
+    Adds a new author to the authors table and new entries for all of the other
+    tables, as needed.
 
-    # TODO: Need to redo so that if empty string is pasesd, you don't pass in values
-    # TODO: Should be similar to add_reading_entry...
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        last_name: Last name of the author to add
+        
+    Returns:
+        author_id (int): Unique ID of the new author entry.
+    """
+
     cols_to_fill = ["last_name"]
     vals_to_fill = [f"'{last_name}'"]
 
@@ -386,13 +521,21 @@ def add_author(conn, last_name: str):
     cols_string = ", ".join(cols_to_fill)
     vals_string = ", ".join(vals_to_fill)
     query = sql_api.read_query("add_author").format(cols_string, vals_string)
-    # query = sql_api.read_query("add_author").format(first_name,
-    #                                                 middle_name,
-    #                                                 last_name,
-    #                                                 suffix)
-    return(sql_api.execute_query(conn, query, "modify_return")[0][0])
+    author_id = sql_api.execute_query(conn, query, "modify_return")[0][0]
+    return(author_id)  # type: ignore
 
-def edit_author(conn, author_id):
+
+def edit_author(conn, author_id: int):
+    """ Edit an existing entry in the author table
+
+    Prompts the user to 1) select a property to modify and 2) provide the
+    new value for the property. Then, it generates and executes the correct
+    update query to modify an existing author entry.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        author_id: ID of the author entry to edit.
+    """
     cols_dict = {
         "First Name": "first_name",
         "Middle Name": "middle_name",
@@ -405,14 +548,37 @@ def edit_author(conn, author_id):
     new_value = input(f"\nWhat is the new {col_select.lower()}?: ")
     query = (f"UPDATE authors SET {cols_dict[col_select]} = '{new_value}' "
               "WHERE id = {author_id}")
-    query = sql_api.read_query("update_author").format(cols_dict[col_select], new_value, author_id)
+    query = sql_api.read_query("update_author").format(cols_dict[col_select],
+                                                       new_value, author_id)
     sql_api.execute_query(conn, query, "modify")
 
-def delete_author(conn, author_id):
+
+def delete_author(conn, author_id: int):
+    """ Delete a book entry from the author database
+
+    Deletes the author entry associated with a given ID from the author table
+    This deletion will cascade to all associated entries with the author ID in
+    other tables in the database.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        author_id: ID of the author entry to delete
+    """
     query = f"DELETE FROM authors WHERE id = {author_id}"
     sql_api.execute_query(conn, query, "modify")
 
-def manage_authors_table(conn, mode):
+
+def manage_authors_table(conn, mode: str):
+    """ Parent function for managing the entries in the authors table
+
+    Controls the execution of different management modes for the authors table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        mode: Indicates whether to use the add, edit, or delete processes.
+    """
     last_name, author_results = prompt_for_author(conn)
     if mode == "add":
         if len(author_results) == 0:
@@ -439,10 +605,24 @@ def manage_authors_table(conn, mode):
                 delete_author(conn, author_id)
 
 
-### ------------- Manage Series ------------- ###
+### –------------ Mange Series -------------- ###
 
-def manage_series_table():
+def manage_series_table(conn, mode: str):
+    """ Parent function for managing the entries in the authors table
+
+    Controls the execution of different management modes for the authors table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        mode: Indicates whether to use the add, edit, or delete processes.
+    
+    Todo:
+        * Implement series mangement workflow
+    """
     pass
+
 
 ### –------------ Mange Genres -------------- ###
 
@@ -459,21 +639,47 @@ def add_genre(conn, name: str):
     query = f"INSERT INTO genres(name) VALUES('{name}') RETURNING id;"
     return(sql_api.execute_query(conn, query, "modify_return")[0][0])
 
-def edit_genre(conn, name: str, id: int):
-    query = f"UPDATE genres SET name = '{name}' WHERE id = {id}"
+
+def edit_genre(conn, name: str, entry_id: int):
+    """ Edit an existing entry in the genres table
+
+    Prompts the user to 1) select a property to modify and 2) provide the
+    new value for the property. Then, it generates and executes the correct
+    update query to modify an existing genre entry.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        entry_id: ID of the genre entry to edit.
+    """
+    query = f"UPDATE genres SET name = '{name}' WHERE id = {entry_id}"
     sql_api.execute_query(conn, query, "modify")
 
+
 def delete_genre(conn, name: str):
+    """ Delete a genre entry from the genres database
+
+    Deletes the genre from the genres database. This deletion will propogate
+    (cascade) to all other tables that reference the newly-deleted genre.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        name: Name of the genre to delete.
+    """
     query = f"DELETE FROM genres WHERE name = '{name}'"
     sql_api.execute_query(conn, query, "modify")
 
-def prompt_for_genre(conn):
-    genre_name = input("Please enter the genre name: ")
-    genre_query = f"SELECT name, id from genres where name ilike '{genre_name}'"
-    genre_result = dict(sql_api.execute_query(conn, genre_query, "to_list"))  # type: ignore
-    return(genre_name, genre_result)
 
 def manage_genres_table(conn, mode: str):
+    """ Parent function for managing the entries in the genres table
+
+    Controls the execution of different management modes for the genres table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        conn (psycopg2.connection): Connection to the PostgreSQL database.
+        mode: Indicates whether to use the add, edit, or delete processes.
+    """
     genre_name, genre_result = prompt_for_genre(conn)
 
     if mode == "add":
@@ -493,10 +699,25 @@ def manage_genres_table(conn, mode: str):
             edit_genre(conn, new_name, genre_id)
         else:
             delete_genre(conn, genre_name)
-        
+
+  
 ### ------------- Main Function ------------- ###
 
 def main(db_select: str, mode: str, sql_configs: Dict[str, str]):
+    """ Main module function
+    
+    Main manage module function to launch different workflows to manage the
+    different databases. Databases are first merged into a user-friendly
+    presentation.
+    
+    Args:
+        db_select: Which database to visualze.
+        mode: Which visualization mode to utilize
+        sql_configs: Configurations for the PostgreSQL database
+
+    Todo:
+        * Implement series management
+    """
     conn = sql_api.connect_to_database(sql_configs["user"],
                                     sql_configs["database"])
 

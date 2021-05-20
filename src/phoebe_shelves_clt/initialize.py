@@ -1,4 +1,4 @@
-""" Methods for initializing databases.
+""" Methods for initializing backend databases.
 
 Provides functions and workflow for preparing the backend databases for the
 command-line tools.
@@ -57,12 +57,17 @@ def create_table(conn, force_overwrite: bool, table_name: str):
 def init_module(backend: str, force_overwrite: bool, **kwargs):
     """ Creates initial book and reading date csv files if not present
 
+    Parent function for begining the initialization of the backend databases.
+    This function will call the appropriate initialization workflow depending
+    on the selected backend.
+
     Args:
         backend: Indicates whether to use the CSV or SQL backend workflows
         force_overwrite: Indicates to overwrite existing databases
-        **kwargs: Arguments specific for the CSV and SQL workflows
-            data_directory (str): Directory to store CSV backend files
-            sql_configs (Dict): SQL database configurations
+
+    Keyword Args:
+        data_directory (str): Directory to store CSV backend files
+        sql_configs (Dict): SQL database configurations
     """
     if backend == "csv":
         data_directory = kwargs["data_directory"]

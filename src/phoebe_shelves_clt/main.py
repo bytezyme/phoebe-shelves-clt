@@ -1,9 +1,7 @@
 #!/usr/bin/env python
+""" Main program for running the command-line tools
 
-""" Main program for running the command line tools
-
-TODO
-    * 
+Main entry point and logic for running the command-line tools.
 """
 
 import os
@@ -25,21 +23,37 @@ def main():
 
     # Configuration is not dependent on the backend, so can be treated separately
     if args.tool == "config":
-        if args.check:
-            print('Data Directory: ', configs.get('CSV', 'data_directory'))
-        elif args.path:
-            configure.update_data_dir(config_path, configs, args.path)
+        if args.config_mode == "check":
+            configure.print_configs(configs)
+        elif args.config_mode == "backend":
+            configure.update_config(config_path, configs, "backend", args.backend)
+        elif args.config_mode == "data_dir":
+            configure.update_config(config_path, configs,"data_directory", args.path)
+        elif args.config_mode == "database":
+            configure.update_config(config_path, configs, "database", args.name)
+        elif args.config_mode == "user":
+            configure.update_config(config_path, configs, "user", args.user)
+        elif args.config_mode == "host":
+            configure.update_config(config_path, configs, "host", args.host)
     
     else:
         if configs.get("GENERAL", "backend") == "csv":
-            if args.tool == 'init':
+            if args.tool == "init":
                 if args.path:
-                    configs = configure.update_data_dir(config_path, configs, args.path)
-                initialize.init_module("csv", args.force, data_directory=configs.get('CSV', 'data_directory'))
+                    configs = configure.update_config(config_path, configs,
+                                                      "data_dir", args.path)
+
+                data_dir = configs.get("GENERAL", "data_directory")
+                initialize.init_module("csv", args.force,
+                                       data_directory=data_dir)
             elif args.tool == "view":
-                view.view_module("csv", args.database, args.mode, data_directory=configs["CSV"]["data_directory"])
+                data_dir = configs.get("GENERAL", "data_directory")
+                view.view_module("csv", args.database, args.mode,
+                                 data_directory=data_dir)
             elif args.tool == "manage":
-                manage.manage_module("csv", args.database, args.mode, data_directory=configs["CSV"]["data_directory"])
+                data_dir = configs.get("GENERAL", "data_directory")
+                manage.manage_module("csv", args.database, args.mode,
+                                     data_directory=data_dir)
         else:
             if args.tool == "init":
                 initialize.init_module("sql", args.force,

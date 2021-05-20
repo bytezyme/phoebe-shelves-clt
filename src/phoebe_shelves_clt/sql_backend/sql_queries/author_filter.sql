@@ -1,7 +1,7 @@
 SELECT temp.*
 FROM (
     SELECT
-        a.first_name || a.middle_name || a.last_name "Author",
+        COALESCE(a.first_name || ' ', '') || COALESCE(a.middle_name || ' ', '') || COALESCE(a.last_name, '') || COALESCE(', ' || a.suffix, '') "Author",
         a.id "ID"
     FROM authors a
 ) as temp

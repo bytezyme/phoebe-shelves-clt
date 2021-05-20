@@ -26,7 +26,7 @@ CREATE TEMP TABLE books_friendly AS (
             string_agg(g.name, ', ')
         FROM books_genres bg
         INNER JOIN genres g
-            on bg.genre_id = g.id
+            on bg.genre_id = g.id {}
         GROUP BY
             bg.book_id
         )

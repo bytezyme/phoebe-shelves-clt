@@ -3,6 +3,7 @@ import pandas as pd
 
 from phoebe_shelves_clt.utils import inputs
 from phoebe_shelves_clt.csv_backend import view_csv
+from phoebe_shelves_clt import manage
 
 def prompt_for_title(db, mode):
     """Request user to enter an acceptable book title
@@ -54,31 +55,10 @@ def prompt_for_property(property_list):
     if prop_to_update == 'Start' or prop_to_update == 'Finish':
         new_val = inputs.prompt_for_date(update_prompt)
     elif prop_to_update == 'Rating':
-        new_val = prompt_for_rating(update_prompt)
+        new_val = manage.prompt_for_rating(update_prompt)
     else:
         new_val = input(update_prompt)
     return((new_val, prop_to_update))
-
-
-def prompt_for_rating(prompt):
-    """Prompt user for an integer rating (max 5)
-
-    Args:
-        prompt {string} -- Prompt that user sees on the command line
-
-    Outputs:
-        rating {int} -- Intger rating or np.nan if empty string is passed
-    """
-
-    rating = input(prompt)
-
-    while rating not in {'', '1', '2', '3', '4', '5'}:
-        rating = input('Choose an integer between 1 and 5 or leave blank: ')
-
-    # Format rating
-    rating = int(rating) if rating != '' else np.nan
-    return(rating)
-
 
 def prompt_for_author(books_db):
     """Prompt the user for author name details
@@ -412,7 +392,7 @@ def add_reading_entry(reading_db, data_directory, book_title):
 
     start_date = inputs.prompt_for_date('Start Date: ')
     finish_date = inputs.prompt_for_date('End Date: ')
-    rating = prompt_for_rating('Rating (1-5): ')
+    rating = manage.prompt_for_rating('Rating (1-5): ')
 
     # Create temporary entry object
     new_entry_dict = {'Title': book_title,
