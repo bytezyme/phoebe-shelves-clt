@@ -4,7 +4,7 @@
 
 ![Example image of Phoebe Shelves CLT in use](https://github.com/anthony-agbay/phoebe-shelves-clt/blob/main/img/phoebe-shelves-clt-example.png)
 
-Phoebe Shelves is reading management tool based on 1) a book database and 2) a reading database. The command line tools provides tools for managing these databases as a pair of CSV files via the command line. Currently, the tools support the following actions:
+Phoebe Shelves is reading management tool based on 1) a book database and 2) a reading database. The command line tools provides tools for managing these databases. Currently, the tools support the following actions:
 
 - Adding, editing, and removing entries from both databases
 - Automatic calculation of the time for each reading event (days)
@@ -12,11 +12,9 @@ Phoebe Shelves is reading management tool based on 1) a book database and 2) a r
 - Support for multiple book ratings and an average rating
 - Visualization of the databases on the command line
 
-**Note: There current build is under active development and likely still contains bugs and/or result in data loss. Please only use for testing purposes** A stable version will be released via the releases tab or via PyPI when ready.
-
 ## Instructions
 
-The following provides an overview of how to use the script. Currently, the tools are unavailiable via PyPI, but you can utilize the scripts by cloning the repository to your device.
+The following provides an overview of how to use the script. Currently, the tools are unavailiable via PyPI, but you can utilize the scripts by cloning the repository to your device or downloading the latest stable version from the releases section.
 
 ### General Usage
 
@@ -47,9 +45,15 @@ Phoebe Shelves has the following dependencies:
     - `pip install tabulate`
     - `conda install tabulate`
 
+##### Choosing a Backend Model
+
+Phoebe Shelves CLT supports two data models: a PostgreSQL database and CSV files. Both models should support the same core features, so there is no inherent advantage to either approach. In the future, the PostgreSQL backend may integrate with remote locations/servers more easily, however.
+
+If you choose to use the CSV backend, there are no further dependencies to install. If you choose to use the PostgreSQL backend, make sure to [intall PostgreSQl](https://www.postgresql.org/download/) and ensure the server is running.
+
 #### 2. Installing Script
 
-Because a public release on pip has not been completed, you will have to install the script manually. Once you have cloned the directory to your local computer, navigate to the directory on the command-line and install the package manually using the following line:
+Because a public release on pip has not been completed, you will have to install the script manually. Once you have cloned the directory/downloaded the latest release to your local computer, navigate to the directory on the command-line and install the package manually using the following line:
 
 ```console
 pip install .
@@ -57,29 +61,36 @@ pip install .
 
 #### 3. Setting Up Configurations
 
-The script relies on a configuration file (`config.cfg`) located in the `phoebeshelves` folder. This configuration file only stores the path to the data directory that will store the CSV files. To setup the configuration file, you can use the included `config` tool:
+The script relies on a configuration file (`config.cfg`) located in the `phoebeshelves` folder. This configuration file stores a variety of configurations for the script. To setup the configuration file, you use the included `config` tool:
 
 ```console
 // Initialize configuration using the default data directory path
 $ phoebeshelves config
 
-// Initialize configuration using a custom data directory path
-$ phoebeshelves config -u [path_to_custom_directory]
+// Print out the current list of configurations
+$ phoebeshelves config check
+
+// Modify a configuration
+$ phoebeshelves config [config_name] [new_value]
 ```
 
-To modify the path afterwards, use the second option above.
+For a list of the arguments to modify the configurations, pass:
+
+```console
+$ phoebeshelves config -h
+```
 
 #### 3. Initializing Databases
 
-Once you are done configuring the data directory path, the next step is to initialize the CSV files. This can be done via the following:
+Once you are done configuring the data directory path, the next step is to initialize the backend model.
 
 ```console
 $ phoebeshelves init
 ```
 
-If there is already an existing `books.csv` or `reading.csv` in the target directory, it ask you to confirm if you would like to overwrite the files. If you want to overwrite existing files without confirmation, pass the `-f` flag.
+If any of the backend model files already exist, this call will *not overwrite any of the existing data*. If you want to overwrite existing files, pass the `-f` flag.
 
-```sh-session
+```console
 $ phoebeshelves init -f
 ```
 
@@ -87,7 +98,7 @@ $ phoebeshelves init -f
 
 There are two primary tools for working with the databases: "view" and "manage" mode. The modes can be quickly activated by passing in the appropriate arguments:
 
-```sh-session
+```console
 $ phoebeshelves view [database] [mode]
 
 $ phoebeshelves manage [database] [mode]
@@ -99,7 +110,7 @@ Each tool provides interactive prompts for the remainder of the script.
 
 There are three primary modes for viewing the database: 1) printing a table to the command line, 2) generating charts of the database, and 3) generating summary statistics. **Currently, only printing the database is fully implemented.**
 
-```sh-session
+```console
 // Printing the books database as a table
 $ phoebeshelves view books table
 
@@ -116,7 +127,7 @@ For all modes, you will be prompted to optionally filter the database based on t
 
 There are three primary actions for managing the database: 1) adding a new entry, 2) editing an existing entry, and 3) deleting an existing entry.
 
-```sh-session
+```console
 // Add new entry to the books database
 $ phoebeshelves manage books add
 
