@@ -9,6 +9,7 @@ import numpy as np
 
 from phoebe_shelves_clt.csv_backend import manage_csv
 from phoebe_shelves_clt.sql_backend import manage_sql
+from phoebe_shelves_clt.utils import data_model
 
 def prompt_for_rating(prompt: str):
     """Prompt user for an integer rating (max 5).
@@ -45,7 +46,8 @@ def manage_module(backend: str, db_select: str, mode: str, **kwargs):
         sql_configs (Dict): SQL server configurations
     """
     if backend == "csv":
-        manage_csv.main(db_select, mode, kwargs["data_directory"])
+        model = data_model.CSVDataModel(kwargs["data_directory"])
+        manage_csv.main(db_select, mode, model)
     else:
         manage_sql.main(db_select, mode, kwargs["sql_configs"])
     pass

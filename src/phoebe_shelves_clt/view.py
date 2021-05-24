@@ -5,6 +5,7 @@ Backend-specific implementations are located within their specific modules and
 common functions and methods are included in this file.
 """
 
+from phoebe_shelves_clt.utils import data_model
 from phoebe_shelves_clt.csv_backend import view_csv
 from phoebe_shelves_clt.sql_backend import view_sql
 
@@ -24,6 +25,7 @@ def view_module(backend: str, db_select: str, mode, **kwargs):
         sql_configs (Dict): SQL server configurations
     """
     if backend == "csv":
-        view_csv.main(db_select, mode, kwargs["data_directory"])
+        model = data_model.CSVDataModel(kwargs["data_directory"])
+        view_csv.main(db_select, mode, model)
     else:
         view_sql.main(db_select, mode, kwargs["sql_configs"])
