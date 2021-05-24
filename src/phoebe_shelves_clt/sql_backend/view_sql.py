@@ -1,7 +1,12 @@
-""" Visualization of books data
+""" Visualization of the database using the SQL backend
 
-Visualize data about the books database. This module utilizes the aggregated
-books database for a more user-friendly format.
+Visualize the backend database with options to filter, aggregate,
+and transform the data into other formats using the SQL backend.
+
+Todo:
+    * Implement chart-based visualization using graphing modules
+    * Implement aggregate statistics characterizations.
+    * Consoldiate with the CSV backend view functions.    
 """
 
 from typing import Dict
