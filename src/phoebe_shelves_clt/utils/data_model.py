@@ -116,7 +116,7 @@ class CSVDataModel:
 
     ### --------------------- Main database views ------------------------- ###
 
-    def generate_main_books(self, to_filter: bool = False,
+    def generate_main_books(self, filter: str = None,
                             **kwargs) -> DataFrame:
         """ Generate the user-friendly books database/table
 
@@ -161,38 +161,41 @@ class CSVDataModel:
         main_books.rename(columns={"id": "ID", "title": "Title",
                                    "book_length": "Pages", "Genre": "Genres"},
                           inplace=True)  # type: ignore
+        
+        if filter is None:
+            pass
+        elif filter == "Author":
+            data_filter = main_books["author_id"].apply(lambda authors: \
+                self.check_all_in_set(kwargs["id_list"], authors))
+            main_books = main_books[data_filter]
 
-        if to_filter:
-            column = kwargs["column"]
+        elif filter == "Genre":
+            data_filter = main_books["genre_id"].apply(lambda genres: \
+                self.check_all_in_set(kwargs["id_list"], genres))
+            main_books = main_books[data_filter]
 
-            if column == "Author":
-                data_filter = main_books["author_id"].apply(lambda authors: \
-                    self.check_all_in_set(kwargs["id_list"], authors))
+        elif filter == "Title":
+            #! This approach can be expanded to accept multiple titles
+            data_filter = main_books["ID"].apply(lambda title: \
+                title in kwargs["id_list"])
+            main_books = main_books[data_filter]
 
-            elif column == "Genre":
-                data_filter = main_books["genre_id"].apply(lambda genres: \
-                    self.check_all_in_set(kwargs["id_list"], genres))
+        elif filter == "Rating":
+            data_filter = self.numeric_filter(\
+                main_books, filter, kwargs["comp_type"],
+                kwargs["thresholds"])
+            main_books = main_books[data_filter]
 
-            elif column == "Title":
-                #! This approach can be expanded to accept multiple titles
-                data_filter = main_books["ID"].apply(lambda title: \
-                    title in kwargs["id_list"])
+        elif filter == "Pages":
+            data_filter = self.numeric_filter(\
+                main_books, filter, kwargs["comp_type"],
+                kwargs["thresholds"])
+            main_books = main_books[data_filter]
 
-            elif column == "Rating":
-                data_filter = self.numeric_filter(\
-                    main_books, column, kwargs["comp_type"],
-                    kwargs["thresholds"])
-
-            elif column == "Pages":
-                data_filter = self.numeric_filter(\
-                    main_books, column, kwargs["comp_type"],
-                    kwargs["thresholds"])
-
-            else:  # Times Read
-                data_filter = self.numeric_filter(\
-                    main_books, column, kwargs["comp_type"],
-                    kwargs["thresholds"])
-
+        else:  # Times Read
+            data_filter = self.numeric_filter(\
+                main_books, filter, kwargs["comp_type"],
+                kwargs["thresholds"])
             main_books = main_books[data_filter]
 
         new_column_order = ["ID", "Title", "Author(s)", "Rating",
@@ -202,7 +205,7 @@ class CSVDataModel:
         main_books.sort_values("Title")
         return(main_books)
 
-    def generate_main_reading(self, to_filter: bool = False,
+    def generate_main_reading(self, filter: str = None,
                               **kwargs) -> DataFrame:
         """ Generate the user-friendly reading database/table
 
@@ -244,39 +247,43 @@ class CSVDataModel:
                                      "read_time": "Read Time"},
                             inplace=True)
 
-        if to_filter:
-            column = kwargs["column"]
-            if column == "Author":
-                data_filter = main_reading["author_id"].apply(lambda authors: \
-                    self.check_all_in_set(kwargs["id_list"], authors))
-
-            elif column == "Title":
-                #! This approach can be expanded to accept multiple titles
-                data_filter = main_reading["book_id"].apply(lambda title: \
-                    title in kwargs["id_list"])
-
-            elif column == "Start":
-                data_filter = self.date_filter(\
-                    main_reading, column, kwargs["comp_type"],
-                    kwargs["thresholds"])
-
-            elif column == "Finish":
-                data_filter = self.date_filter(\
-                    main_reading, column, kwargs["comp_type"],
-                    kwargs["thresholds"])
-
-            elif column == "Read Time":
-                data_filter = self.numeric_filter(\
-                    main_reading, column, kwargs["comp_type"],
-                    kwargs["thresholds"])
-
-            else:  # Rating
-                data_filter = self.numeric_filter(\
-                    main_reading, column, kwargs["comp_type"],
-                    kwargs["thresholds"])
-
+        if filter is None:
+            pass
+        elif filter == "Author":
+            data_filter = main_reading["author_id"].apply(lambda authors: \
+                self.check_all_in_set(kwargs["id_list"], authors))
             main_reading = main_reading[data_filter]
 
+        elif filter == "Title":
+            #! This approach can be expanded to accept multiple titles
+            data_filter = main_reading["book_id"].apply(lambda title: \
+                title in kwargs["id_list"])
+            main_reading = main_reading[data_filter]
+
+        elif filter == "Start":
+            data_filter = self.date_filter(\
+                main_reading, filter, kwargs["comp_type"],
+                kwargs["thresholds"])
+            main_reading = main_reading[data_filter]
+
+        elif filter == "Finish":
+            data_filter = self.date_filter(\
+                main_reading, filter, kwargs["comp_type"],
+                kwargs["thresholds"])
+            main_reading = main_reading[data_filter]
+
+        elif filter == "Read Time":
+            data_filter = self.numeric_filter(\
+                main_reading, filter, kwargs["comp_type"],
+                kwargs["thresholds"])
+            main_reading = main_reading[data_filter]
+
+        else:  # Rating
+            data_filter = self.numeric_filter(\
+                main_reading, filter, kwargs["comp_type"],
+                kwargs["thresholds"])
+            main_reading = main_reading[data_filter]
+                
         new_col_order = ["ID", "Title", "Author(s)", "Start", "Finish", "Rating", "Read Time"]
         main_reading = main_reading.reindex(columns=new_col_order)  # type: ignore
         main_reading.set_index("ID", inplace=True)

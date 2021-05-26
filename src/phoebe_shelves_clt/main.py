@@ -54,21 +54,6 @@ def main():
                 data_dir = configs.get("GENERAL", "data_directory")
                 manage.manage_module("csv", args.database, args.mode,
                                      data_directory=data_dir)
-
-            # #! Debugging and Development Block
-            # if args.tool == "init":
-            #     if args.path:
-            #         configs = configure.update_config(config_path, configs,
-            #                                           "data_dir", args.path)
-            #     data_dir = configs.get("GENERAL", "data_directory")
-            #     initialize.init_module("csv", args.force,
-            #                         data_directory=data_dir)
-            # else:
-            #     data_dir = configs.get("GENERAL", "data_directory")
-            #     my_model = data_model.CSVDataModel(data_dir)
-            #     # my_model.generate_main_books()
-            #     print(my_model.main_reading.to_markdown())
-
         else:
             if args.tool == "init":
                 initialize.init_module("sql", args.force,
