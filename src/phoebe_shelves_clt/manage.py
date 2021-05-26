@@ -50,4 +50,3 @@ def manage_module(backend: str, db_select: str, mode: str, **kwargs):
         manage_csv.main(db_select, mode, model)
     else:
         manage_sql.main(db_select, mode, kwargs["sql_configs"])
-    pass

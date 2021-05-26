@@ -608,9 +608,9 @@ def manage_authors_table(conn, mode: str):
 ### –------------ Mange Series -------------- ###
 
 def manage_series_table(conn, mode: str):
-    """ Parent function for managing the entries in the authors table
+    """ Parent function for managing the entries in the series table
 
-    Controls the execution of different management modes for the authors table.
+    Controls the execution of different management modes for the series table.
     Modes are selected via the initial command-line arguments and further
     information is requested via interactive prompts.
 
@@ -626,7 +626,7 @@ def manage_series_table(conn, mode: str):
 
 ### –------------ Mange Genres -------------- ###
 
-def add_genre(conn, name: str):
+def add_genre(conn, name: str) -> int:
     """ Add a new genre to the genre table
 
     Args:
@@ -637,7 +637,8 @@ def add_genre(conn, name: str):
         (int): Genre ID of the new genre
     """
     query = f"INSERT INTO genres(name) VALUES('{name}') RETURNING id;"
-    return(sql_api.execute_query(conn, query, "modify_return")[0][0])
+    return(sql_api.execute_query(\
+        conn, query, "modify_return")[0][0])  # type: ignore
 
 
 def edit_genre(conn, name: str, entry_id: int):

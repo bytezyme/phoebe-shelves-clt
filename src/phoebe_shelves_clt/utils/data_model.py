@@ -6,7 +6,7 @@ with the CSV backend that can simulate similar programming patterns as
 interacting with the SQL backend.
 """
 
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Tuple
 
 import pandas as pd
 import numpy as np
@@ -22,6 +22,8 @@ class CSVDataModel:
         data_directory: Path to the data directory
         model_data (Dict[str: DataFrame]): Dictionary of table names to the
             respective DataFrame representation.
+        model_paths (Dict[str: str]): Dictionary of table names to the path
+            of the underlying CSV.
         csv_list (List[str]): List of the component CSV file names.
     """
 
@@ -36,9 +38,9 @@ class CSVDataModel:
             data_directory: Path to the data directory.
         """
         self.data_directory = data_directory
-        self.model_data = self.load_model()
+        self.model_data, self.model_paths = self.load_model()
 
-    def load_model(self) -> Dict[str, DataFrame]:
+    def load_model(self) -> Tuple[Dict[str, DataFrame], Dict[str, str]]:
         """ Read in all component CSV tables
 
         Reads in all component CSV tables into a Pandas DataFrame for use in
@@ -48,25 +50,32 @@ class CSVDataModel:
             self: The current CSVDataModel instance.
         
         Returns:
-            data_model (Dict[str: DataFrame]): Dictionary of table names to the
-            respective DataFrame representation.
+            model_data (Dict[str: DataFrame]): Dictionary of table names to the
+                respective DataFrame representation.
+            model_paths (Dict[str: str]): Dictionary of table names to the path
+                of the underlying CSV.
         """
-        data_model = {}
+        model_data = {}
+        model_paths = {}
+
         for name in self.csv_list:
             path = f"{self.data_directory}/backend/{name}.csv"
-            data_model[name] = pd.read_csv(path)
+            model_paths[name] = path
+            model_data[name] = pd.read_csv(path)
 
             # Need to fill NA for string concatenation later on
             if name == "authors":
-                data_model[name].fillna("", inplace=True)
-        return(data_model)
+                model_data[name].fillna("", inplace=True)
+
+    
+        return(model_data, model_paths)
 
     csv_list = ["authors", "books", "genres", "reading", "series",
                 "books_authors", "books_genres", "books_series"]
 
     ### --------------------- Retrieve basic lists ------------------------ ###
 
-    def get_authors_dict(self) -> Dict[str, int]:
+    def get_authors_dict(self, selection: str = None) -> Dict[str, int]:
         """ Retrieve dictionary of authors.
 
         Retrieves dictionary of all author names and their author ID's for use
@@ -78,11 +87,14 @@ class CSVDataModel:
         Returns:
             Dictionary mapping from the formatted author names to their
             respective author IDs.
+
+        Todo:
+            * Update docuemntation
         """
-        authors = self.create_authors_formatted()
+        authors = self.create_authors_formatted(selection)
         return(dict(zip(authors["Author"], authors["id"])))
 
-    def get_books_dict(self) -> Dict[str, int]:
+    def get_books_dict(self, selection: str = None) -> Dict[str, int]:
         """ Retrieve dictionary of book titles.
 
         Retrieves a dictionary of all of the books titles and their respective
@@ -94,11 +106,22 @@ class CSVDataModel:
         Returns:
             Dictionary mapping from the book titles to their respective
             book IDs.
-        """
-        return(dict(zip(self.model_data["books"]["title"],
-                        self.model_data["books"]["id"])))
 
-    def get_genres_dict(self) -> Dict[str, int]:
+        Todo:
+            * Update documentation
+        """
+        books_dict = dict(zip(self.model_data["books"]["title"],
+                        self.model_data["books"]["id"]))
+
+        if selection is not None:
+            books_dict = {title:book_id
+                          for title, book_id
+                          in books_dict.items()
+                          if title == selection}
+
+        return(books_dict)
+
+    def get_genres_dict(self, selection: str = None) -> Dict[str, int]:
         """ Retrieve dictionary of genres.
 
         Retrieves a dictionary of all of the genres and their respective genre
@@ -110,9 +133,20 @@ class CSVDataModel:
         Returns:
             Dictionary mapping from the genre names to their respective
             genre IDs.
+
+        Todo:
+            * Update documentation
         """
-        return(dict(zip(self.model_data["genres"]["name"],
-                        self.model_data["genres"]["id"])))
+        genres_dict = dict(zip(self.model_data["genres"]["name"],
+                        self.model_data["genres"]["id"]))
+        
+        if selection is not None:
+            genres_dict = {genre:genre_id
+                        for genre, genre_id
+                        in genres_dict.items()
+                        if genre == selection}
+
+        return(genres_dict)
 
     ### --------------------- Main database views ------------------------- ###
 
@@ -293,7 +327,7 @@ class CSVDataModel:
 
     ### ------------------ Table Merging and Formatting ------------------- ###
 
-    def create_authors_formatted(self) -> DataFrame:
+    def create_authors_formatted(self, selection: str = None) -> DataFrame:
         """ Generate fully-formatted authors table
 
         Generates a fully-formatted authors table that combines the individual
@@ -307,8 +341,15 @@ class CSVDataModel:
                 formatted name.
         """
         authors_formatted = self.model_data["authors"].copy()
-        authors_formatted["Author"] = authors_formatted.apply(lambda row: self.merge_names(row), axis=1)
-        authors_formatted.drop(columns=["first_name", "middle_name", "last_name", "suffix"], inplace=True)
+        if selection is not None:
+            authors_formatted = authors_formatted[authors_formatted["last_name"] == selection]
+        #? Problem: all of the apply and drop fails if there is an empty DF returned from the selection filter
+        if not authors_formatted.empty:
+            authors_formatted["Author"] = authors_formatted.apply(lambda row: self.merge_names(row), axis=1)
+            authors_formatted.drop(columns=["first_name", "middle_name", "last_name", "suffix"], inplace=True)
+        else:
+            authors_formatted["Author"] = None
+            authors_formatted.drop(columns=["first_name", "middle_name", "last_name", "suffix"], inplace=True)
         return(authors_formatted)
 
 
@@ -532,3 +573,88 @@ class CSVDataModel:
         else:  # comp_type == 4
             data_filter = data[column].isnull()
         return(data_filter)
+
+    def generate_id(self, table: str):
+        """ Generate a new ID by comparing to existing ID's.
+
+        Generates a new entry ID by sequentially walking through integers
+        from 0 until a new ID is not present in the existing ID's. This method
+        is used to allow reusing of ID's should an entry be deleted (which)
+        frees up an ID.
+
+        Todo:
+            * Complete Documentation
+        """
+
+        id_set = set(self.model_data[table]["id"])
+        new_id = 1
+
+        while new_id in id_set:
+            new_id += 1
+
+        return(new_id)
+            
+    def add_entry(self, table: str, entry_details: dict):
+        
+        self.model_data[table] = self.model_data[table].append(\
+            entry_details, ignore_index=True)
+        self.model_data[table].to_csv(self.model_paths[table], index=False)
+
+    def edit_entry(self, table: str, id_column: str, id_value: int, new_column: str, new_val):
+        """ Edits an existing entry
+
+        Edits an existing entry and saves the edit to the CSV
+
+        """
+        # Get position based on id_column and entry_id
+        pos = self.model_data[table][self.model_data[table][id_column]\
+             == id_value].index[0]
+        self.model_data[table].at[pos, new_column] = new_val
+        self.model_data[table].to_csv(self.model_paths[table], index=False)
+
+
+    def delete_entry(self, table: str, id_value):
+        """ Controls delete cascades
+
+        If a book is deleted: we need to remove:
+            1) books_authors
+            2) books_genres
+            3) reading
+            4) books_series
+
+        If an author is deleted, we need to remove:
+            1) books_authors
+
+        If a genre is deleted, we need to remove:
+            1) books_genres
+
+        if a series is deleted, we need to remove:
+            1) series
+
+        If a reading is deleted, we need to remove:
+            1) Nothing–Link is via the book_id!
+        """
+        if table == "authors":
+            to_delete = self.model_data[table][self.model_data[table]["id"]\
+                 == id_value].index
+            self.model_data[table].drop(to_delete, inplace=True)  # type: ignore
+            self.model_data[table].to_csv(self.model_paths[table], index=False)
+            
+            to_delete = self.model_data["books_authors"]\
+                [self.model_data["books_authors"]["author_id"] == id_value].index
+            self.model_data["books_authors"].drop(to_delete, inplace=True)  #type: ignore
+            self.model_data["books_authors"].to_csv(self.model_paths["books_authors"], index=False)
+        if table == "books":
+            pass
+        elif table =="genres":
+            to_delete = self.model_data[table][self.model_data[table]["id"]\
+                 == id_value].index
+            self.model_data[table].drop(to_delete, inplace=True)  # type: ignore
+            self.model_data[table].to_csv(self.model_paths[table], index=False)
+            
+            to_delete = self.model_data["books_genres"]\
+                [self.model_data["books_genres"]["genre_id"] == id_value].index
+            self.model_data["books_genres"].drop(to_delete, inplace=True)  #type: ignore
+            self.model_data["books_genres"].to_csv(self.model_paths["books_genres"], index=False)
+        else:  # table == "series"
+            pass
