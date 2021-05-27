@@ -656,7 +656,7 @@ def edit_genre(conn, name: str, entry_id: int):
     sql_api.execute_query(conn, query, "modify")
 
 
-def delete_genre(conn, name: str):
+def delete_genre(conn, genre_id):
     """ Delete a genre entry from the genres database
 
     Deletes the genre from the genres database. This deletion will propogate
@@ -666,7 +666,7 @@ def delete_genre(conn, name: str):
         conn (psycopg2.connection): Connection to the PostgreSQL database.
         name: Name of the genre to delete.
     """
-    query = f"DELETE FROM genres WHERE name = '{name}'"
+    query = f"DELETE FROM genres WHERE id = {genre_id}"
     sql_api.execute_query(conn, query, "modify")
 
 
@@ -699,7 +699,7 @@ def manage_genres_table(conn, mode: str):
             new_name = input("Please enter the new genre name: ")
             edit_genre(conn, new_name, genre_id)
         else:
-            delete_genre(conn, genre_name)
+            delete_genre(conn, genre_result[genre_name])
 
   
 ### ------------- Main Function ------------- ###

@@ -6,7 +6,7 @@ with the CSV backend that can simulate similar programming patterns as
 interacting with the SQL backend.
 """
 
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Union
 
 import pandas as pd
 import numpy as np
@@ -148,6 +148,12 @@ class CSVDataModel:
 
         return(genres_dict)
 
+    def get_reading_entries(self, selection: int = None) -> List[int]:
+        entries = self.model_data["reading"]
+        if selection is not None:
+            entries = entries[entries["book_id"] == selection]
+        return(list(entries.id))
+
     ### --------------------- Main database views ------------------------- ###
 
     def generate_main_books(self, filter: str = None,
@@ -189,11 +195,15 @@ class CSVDataModel:
                               left_on="id", right_on="book_id",
                               ).drop(columns=["book_id"])
         main_books = pd.merge(main_books, books_reading_agg,
-                              left_on="id", right_on="book_id")
+                              left_on="id", right_on="book_id",
+                              how="left")
+        main_books["times_read"] = main_books.apply(lambda row:\
+            0 if np.isnan(row.times_read) else row.times_read, axis=1)
         main_books["Rating"] = main_books.apply(lambda row: \
-            self.merge_ratings(row), axis=1)
+            row.rating if np.isnan(row.avg_rating) else row.avg_rating, axis=1)
         main_books.rename(columns={"id": "ID", "title": "Title",
-                                   "book_length": "Pages", "Genre": "Genres"},
+                                   "book_length": "Pages", "Genre": "Genres",
+                                   "times_read": "Times Read"},
                           inplace=True)  # type: ignore
         
         if filter is None:
@@ -427,7 +437,7 @@ class CSVDataModel:
             books_reading_agg: Group-and-aggregated reading table.
         """
         books_reading_agg = self.model_data["reading"].groupby("book_id").agg({"rating": "mean", "finish_date": "count"})
-        books_reading_agg.rename(columns={"rating": "avg_rating", "finish_date": "Times Read"}, inplace=True)
+        books_reading_agg.rename(columns={"rating": "avg_rating", "finish_date": "times_read"}, inplace=True)
         return(books_reading_agg)
 
 
@@ -463,25 +473,6 @@ class CSVDataModel:
         
         return(final_name)
 
-    def merge_ratings(self, row: Series) -> float:
-        """ Merge the ratings from the reading and books backend table
-
-        Merges the overall book rating from the books backend table and the
-        average rating from the aggregated reading table. If there is a valid
-        average rating from the reading table, it will be used. Otherwise, the
-        overall book rating from the books backend table is used.
-
-        Args:
-            self: Current CSVDataModel instance.
-            row: Current main books row entry.
-        
-        Returns:
-            (float): The average rating (if available) or the overall rating.
-        """
-        if np.isnan(row.avg_rating):
-            return(row.rating)
-        else:
-            return(row.avg_rating)
 
     def check_all_in_set(self, start_list: List, target_set: Set) -> bool:
         """ Checks if all elements of a list exists in another set
@@ -594,11 +585,15 @@ class CSVDataModel:
 
         return(new_id)
             
-    def add_entry(self, table: str, entry_details: dict):
-        
+    def add_entry(self, table: str, entry_details: dict) -> Union[int, None]:
+        if table in {"books", "authors", "genres", "series", "reading"}:
+            entry_details["id"] = self.generate_id(table)
+
         self.model_data[table] = self.model_data[table].append(\
             entry_details, ignore_index=True)
         self.model_data[table].to_csv(self.model_paths[table], index=False)
+        if table in {"books", "authors", "genres", "series", "reading"}:
+            return(entry_details["id"])
 
     def edit_entry(self, table: str, id_column: str, id_value: int, new_column: str, new_val):
         """ Edits an existing entry
@@ -613,48 +608,59 @@ class CSVDataModel:
         self.model_data[table].to_csv(self.model_paths[table], index=False)
 
 
-    def delete_entry(self, table: str, id_value):
-        """ Controls delete cascades
+    def delete_entry(self, table, id_column, id_value):
+        to_delete = self.model_data[table][self.model_data[table][id_column]\
+            == id_value].index
+        self.model_data[table].drop(to_delete, inplace=True)  # type: ignore
+        self.model_data[table].to_csv(self.model_paths[table], index=False)
 
-        If a book is deleted: we need to remove:
-            1) books_authors
-            2) books_genres
-            3) reading
-            4) books_series
+    # def delete_entry(self, table: str, id_value):
+    #     """ Controls delete cascades
 
-        If an author is deleted, we need to remove:
-            1) books_authors
+    #     If a book is deleted: we need to remove:
+    #         1) books_authors
+    #         2) books_genres
+    #         3) reading
+    #         4) books_series
 
-        If a genre is deleted, we need to remove:
-            1) books_genres
+    #     If an author is deleted, we need to remove:
+    #         1) books_authors
 
-        if a series is deleted, we need to remove:
-            1) series
+    #     If a genre is deleted, we need to remove:
+    #         1) books_genres
 
-        If a reading is deleted, we need to remove:
-            1) Nothing–Link is via the book_id!
-        """
-        if table == "authors":
-            to_delete = self.model_data[table][self.model_data[table]["id"]\
-                 == id_value].index
-            self.model_data[table].drop(to_delete, inplace=True)  # type: ignore
-            self.model_data[table].to_csv(self.model_paths[table], index=False)
+    #     if a series is deleted, we need to remove:
+    #         1) series
+
+    #     If a reading is deleted, we need to remove:
+    #         1) Nothing–Link is via the book_id!
+    #     """
+    #     if table == "authors":
+    #         to_delete = self.model_data[table][self.model_data[table]["id"]\
+    #              == id_value].index
+    #         self.model_data[table].drop(to_delete, inplace=True)  # type: ignore
+    #         self.model_data[table].to_csv(self.model_paths[table], index=False)
             
-            to_delete = self.model_data["books_authors"]\
-                [self.model_data["books_authors"]["author_id"] == id_value].index
-            self.model_data["books_authors"].drop(to_delete, inplace=True)  #type: ignore
-            self.model_data["books_authors"].to_csv(self.model_paths["books_authors"], index=False)
-        if table == "books":
-            pass
-        elif table =="genres":
-            to_delete = self.model_data[table][self.model_data[table]["id"]\
-                 == id_value].index
-            self.model_data[table].drop(to_delete, inplace=True)  # type: ignore
-            self.model_data[table].to_csv(self.model_paths[table], index=False)
+    #         to_delete = self.model_data["books_authors"]\
+    #             [self.model_data["books_authors"]["author_id"] == id_value].index
+    #         self.model_data["books_authors"].drop(to_delete, inplace=True)  #type: ignore
+    #         self.model_data["books_authors"].to_csv(self.model_paths["books_authors"], index=False)
+    #     if table == "books":
+    #         to_delete = self.model_data[table][self.model_data[table]["id"]\
+    #              == id_value].index
+    #         self.model_data[table].drop(to_delete, inplace=True)  #type: ignore
+    #         self.model_data[table].to_csv(self.model_paths[table], index=False)
+
+
+    #     elif table =="genres":
+    #         to_delete = self.model_data[table][self.model_data[table]["id"]\
+    #              == id_value].index
+    #         self.model_data[table].drop(to_delete, inplace=True)  # type: ignore
+    #         self.model_data[table].to_csv(self.model_paths[table], index=False)
             
-            to_delete = self.model_data["books_genres"]\
-                [self.model_data["books_genres"]["genre_id"] == id_value].index
-            self.model_data["books_genres"].drop(to_delete, inplace=True)  #type: ignore
-            self.model_data["books_genres"].to_csv(self.model_paths["books_genres"], index=False)
-        else:  # table == "series"
-            pass
+    #         to_delete = self.model_data["books_genres"]\
+    #             [self.model_data["books_genres"]["genre_id"] == id_value].index
+    #         self.model_data["books_genres"].drop(to_delete, inplace=True)  #type: ignore
+    #         self.model_data["books_genres"].to_csv(self.model_paths["books_genres"], index=False)
+    #     else:  # table == "series"
+    #         pass

@@ -1,8 +1,7 @@
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Union, List
 
 import numpy as np
 import pandas as pd
-
 
 from phoebe_shelves_clt.utils import inputs
 from phoebe_shelves_clt.csv_backend import view_csv
@@ -23,13 +22,55 @@ def prompt_for_author(model: CSVDataModel) -> Tuple[str, Dict]:
     author_results = model.get_authors_dict(last_name)
     return(last_name, author_results)
 
-def prompt_for_genre(model: CSVDataModel) -> Tuple[str, Dict]:
+def prompt_for_genre(model: CSVDataModel) -> Tuple[str, Dict[str, int]]:
     genre_name = input("Please enter the genre name: ")
     genre_results = model.get_genres_dict(genre_name)
     return(genre_name, genre_results)
 
 
 ### ------------- Selections ------------- ###
+
+def select_author(model):
+    last_name, author_results = prompt_for_author(model)
+
+    if len(author_results) == 0:
+        author_id = add_author(model, last_name)
+    else:
+        author_options = list(author_results.keys()) + ["New Author"]
+        author_select = inputs.prompt_from_choices(author_options)
+        if author_select == "New Author":
+            author_id = add_author(model, last_name)
+        else:
+            author_id = author_results[author_select]
+    return(author_id)
+
+def select_genre(model: CSVDataModel):
+    genres_dict = model.get_genres_dict()
+    genre_options = list(genres_dict.keys()) + ["New Genre"]
+    print("\nSelect from the following choices to choose a genre.")
+    genre_select = inputs.prompt_from_choices(genre_options)
+
+    if genre_select == "New Genre":
+        new_genre = input("Please enter the new genre's name: ")
+        genre_id = add_genre(model, new_genre)
+    else:
+        genre_id = genres_dict[genre_select]
+
+    return(genre_id)
+
+def select_book(model: CSVDataModel):
+    title, title_results = prompt_for_title(model)
+
+    if len(title_results) == 0:
+        book_id = add_book(model, title)
+    else:
+        title_opts = list(title_results.keys()) + ["New Book"]
+        title_select = inputs.prompt_from_choices(title_opts)
+        if title_select == "New Book":
+            book_id = add_book(model, title)
+        else:
+            book_id = title_results[title_select]
+    return(title, book_id)  # type: ignore
 
 ### –------------ Mange Authors ------------- ###
 
@@ -61,12 +102,10 @@ def add_author(model: CSVDataModel, last_name, backend="csv"):
         val = f"'{suffix}'" if backend == "sql" else suffix
         vals_to_fill.append(val)
 
-    cols_to_fill.append("id")
     new_entry: Dict[str, Any] = dict(zip(cols_to_fill, vals_to_fill))
-    new_entry["id"] = model.generate_id("authors")
-    model.add_entry("authors", new_entry)
+    entry_id = model.add_entry("authors", new_entry)
 
-    return(new_entry["id"])  # type: ignore
+    return(entry_id)  # type: ignore
 
 
 def edit_author(model: CSVDataModel, author_id):
@@ -84,7 +123,12 @@ def edit_author(model: CSVDataModel, author_id):
 
 
 def delete_author(model: CSVDataModel, author_id):
-    model.delete_entry("authors", author_id)
+
+    # Delete entry in authors table
+    model.delete_entry("authors", "id", author_id)
+
+    # Delete entry in books_authors table
+    model.delete_entry("books_authors", "author_id", author_id)
 
 
 def manage_authors_table(model: CSVDataModel, mode: str):
@@ -116,13 +160,90 @@ def manage_authors_table(model: CSVDataModel, mode: str):
 
 ### –------------ Mange Books ------------- ###
 
+def add_book(model: CSVDataModel, title: str) -> int:
+    author_id = select_author(model)
+    pages = inputs.prompt_for_pos_int("Page length: ")
+    rating = manage.prompt_for_rating("Rating (1-5) (Optional): ")
+    genre_id = select_genre(model)
+
+    #! Does not need same approach as adding a reading entry because there are
+    #! only two potential query statements
+    if rating is np.nan:
+        new_entry = {"title": title, "book_length": pages}
+    else:
+        new_entry = {"title": title, "book_length": pages, "rating": rating}
+
+    book_id = model.add_entry("books", new_entry)
+
+    _ = model.add_entry("books_authors", {"book_id": book_id,
+                                          "author_id": author_id})
+
+    _ = model.add_entry("books_genres", {"book_id": book_id,
+                                          "genre_id": genre_id})
+
+    return(book_id)  # type: ignore
+
+def edit_book(model:CSVDataModel, book_id: int):
+    cols = ["Title", "Author", "Pages", "Rating", "Genre"]
+    print("\nWhich author property would you like to modify?")
+    col_select = inputs.prompt_from_choices(cols)
+
+    if col_select == "Title":
+        new_title = input("\nWhat is the new title?: ")
+        model.edit_entry("books", "id", book_id, "title", new_title)
+    elif col_select == "Author":
+        author_id = select_author(model)
+        model.edit_entry("books_authors", "book_id", book_id, "author_id", author_id)
+    elif col_select == "Pages":
+        new_pages = inputs.prompt_for_pos_int("New page length: ")
+        model.edit_entry("books", "id", book_id, "book_length", new_pages)
+    elif col_select == "Rating":
+        new_rating = manage.prompt_for_rating("New rating (1-5): ")
+        model.edit_entry("books", "id", book_id, "rating", new_rating)
+    elif col_select == "Genre":
+        genre_id = select_genre(model)
+        model.edit_entry("books_genres", "book_id", book_id, "genre_id", genre_id)
+
+def delete_book(model: CSVDataModel, book_id: int):
+    """ Deletes a book and all dependencies
+
+    To delete a book you must cascade the following:
+    1) books_authors
+    2) books_genres
+    3) books_series
+    4) reading
+    """
+
+    model.delete_entry("books", "id", book_id)
+    model.delete_entry("books_authors", "book_id", book_id)
+    model.delete_entry("books_genres", "book_id", book_id)
+    # model.delete_entry("books_series", "book_id", book_id)
+    model.delete_entry("reading", "book_id", book_id)
 
 def manage_books_table(model: CSVDataModel, mode: str):
-    pass
+    title, results = prompt_for_title(model)
+
+    if mode == "add":
+        if len(results) == 0:
+            add_book(model, title)
+        else:
+            to_edit_prompt = (f"\"{title}\" already exists in the books "
+                              "database. Would you like to edit the entry?")
+            if inputs.confirm(to_edit_prompt):
+                edit_book(model, results[title])
+ 
+    else:
+        while len(results) == 0:
+            print(f"\"{title}\" does not exist in the books database.")
+            title, results = prompt_for_title(model)
+        if mode == "edit":
+            edit_book(model, results[title])
+        else:
+            delete_book(model, results[title])
 
 ### –------------ Mange Genres -------------- ###
 
-def add_genre(model: CSVDataModel, genre_name) -> int:
+def add_genre(model: CSVDataModel, genre_name) -> Union[int, None]:
     """ Add a new genre to the genre table
 
     Adds a new genre entry to the genre table. This method does not
@@ -130,9 +251,7 @@ def add_genre(model: CSVDataModel, genre_name) -> int:
     when processing user input.
     """
 
-    new_id = model.generate_id("genres")
-    new_entry = {"id": new_id, "name": genre_name}
-    model.add_entry("genres", new_entry)
+    new_id = model.add_entry("genres", {"name": genre_name})
     return(new_id)
 
 
@@ -140,9 +259,12 @@ def edit_genre(model: CSVDataModel, name: str, genre_id: int):
     model.edit_entry("genres", "id", genre_id, "name", name)
 
 
-def delete_genre(model: CSVDataModel, genre_name):
-    genre_id = model.get_genres_dict()[genre_name]
-    model.delete_entry("genres", genre_id)
+def delete_genre(model: CSVDataModel, genre_id):
+    # Delete entry in genres table
+    model.delete_entry("genres", "id", genre_id)
+
+    # Delete entry in books_genres table
+    model.delete_entry("books_genres", "genre_id", genre_id)
 
 
 def manage_genres_table(model: CSVDataModel, mode: str):
@@ -168,9 +290,84 @@ def manage_genres_table(model: CSVDataModel, mode: str):
 
 ### –------------ Mange Reading ------------- ###
 
+def add_reading_entry(model: CSVDataModel, book_id):
+    print("Please enter the following optional information.")
+    start = inputs.prompt_for_date("Start date: ")
+    finish = inputs.prompt_for_date("Finish date: ")
+    rating = manage.prompt_for_rating("Rating (1-5): ")
+
+    new_entry = {"book_id": book_id}
+    if start != "":
+        new_entry["start_date"] = start
+    if finish != "":
+        new_entry["finish_date"] = finish
+    if rating != "":
+        new_entry["rating"] = rating
+
+    return(model.add_entry("reading", new_entry))
+
+def edit_reading_entry(model: CSVDataModel, title: str, id_list: List[int]):
+    book_id_list = [model.get_books_dict(title)[title]]
+
+    view_csv.print_table(model.generate_main_reading(filter="Title",
+                                                     id_list=book_id_list),
+                         show_index=True)
+
+    edit_id = inputs.prompt_from_choices(id_list, "Choose an entry to edit: ",
+                                         zero_indexed=True, use_index=False)
+
+    prop_opts = ["Title", "Start", "Finish", "Rating"]
+    print("\nWhich property would you like to edit?")
+    prop_select = inputs.prompt_from_choices(prop_opts)
+
+    if prop_select == "Title":
+        _, book_id = select_book(model)
+        model.edit_entry("reading", "id", edit_id, "book_id", book_id)
+
+    elif prop_select in {"Start", "Finish"}:
+        date = inputs.prompt_for_date(f"New {prop_select.lower()} date: ",
+                                          as_string=True)
+        col_name = "start_date" if prop_select == "Start" else "finish_date"
+        model.edit_entry("reading", "id", edit_id, col_name, date)
+    else:
+        new_rating = manage.prompt_for_rating("New Rating: ")
+        model.edit_entry("reading", "id", edit_id, "rating", new_rating)
+
+
+def delete_reading_entry(model: CSVDataModel, title: str, id_list: List[int]):
+    book_id_list = [model.get_books_dict(title)[title]]
+
+    view_csv.print_table(model.generate_main_reading(filter="Title",
+                                                     id_list=book_id_list),
+                         show_index=True)
+
+    edit_id = inputs.prompt_from_choices(id_list, "Choose an entry to delete: ",
+                                         zero_indexed=True, use_index=False)
+    model.delete_entry("reading", "id", edit_id)
 
 def manage_reading_table(model: CSVDataModel, mode: str):
-    pass
+    title, book_id = select_book(model)
+    entry_id_list = model.get_reading_entries(book_id)
+
+    if mode == "add":
+        if len(entry_id_list) == 0:  # type: ignore
+            add_reading_entry(model, book_id)
+        else:
+            to_edit_prompt = (f"There are existing entries for {title}. "
+                               "Would you like to edit one of those entries?")
+            if inputs.confirm(to_edit_prompt):
+                edit_reading_entry(model, title, entry_id_list)  # type: ignore
+            else:
+                add_reading_entry(model, book_id)
+    else:
+        while len(entry_id_list) == 0:
+            print(f"\"{title}\" does not have any associated reading entries.")
+            title, book_id = select_book(model)
+            entry_id_list = model.get_reading_entries(book_id)
+        if mode == "edit":
+            edit_reading_entry(model, title, entry_id_list)
+        else:
+            delete_reading_entry(model, title, entry_id_list)
 
 
 ### –------------ Mange Series -------------- ###
