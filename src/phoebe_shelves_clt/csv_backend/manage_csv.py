@@ -12,26 +12,11 @@ CSVDataModel = data_model.CSVDataModel
 
 ### ----------- Getting Details --------------- ###
 
-def prompt_for_title(model: CSVDataModel) -> Tuple[str, Dict]:
-    title = input("Please enter the book title: ")
-    title_results = model.get_books_dict(title)
-    return(title, title_results)
-
-def prompt_for_author(model: CSVDataModel) -> Tuple[str, Dict]:
-    last_name = input("Please enter the author's last name: ")
-    author_results = model.get_authors_dict(last_name)
-    return(last_name, author_results)
-
-def prompt_for_genre(model: CSVDataModel) -> Tuple[str, Dict[str, int]]:
-    genre_name = input("Please enter the genre name: ")
-    genre_results = model.get_genres_dict(genre_name)
-    return(genre_name, genre_results)
-
 
 ### ------------- Selections ------------- ###
 
 def select_author(model):
-    last_name, author_results = prompt_for_author(model)
+    last_name, author_results = manage.prompt_for_author("csv", model)
 
     if len(author_results) == 0:
         author_id = add_author(model, last_name)
@@ -59,7 +44,7 @@ def select_genre(model: CSVDataModel):
     return(genre_id)
 
 def select_book(model: CSVDataModel):
-    title, title_results = prompt_for_title(model)
+    title, title_results = manage.prompt_for_title("csv", model)
 
     if len(title_results) == 0:
         book_id = add_book(model, title)
@@ -132,7 +117,7 @@ def delete_author(model: CSVDataModel, author_id):
 
 
 def manage_authors_table(model: CSVDataModel, mode: str):
-    last_name, author_results = prompt_for_author(model)
+    last_name, author_results = manage.prompt_for_author("csv", model)
     if mode == "add":
         if len(author_results) == 0:
             _ = add_author(model, last_name)
@@ -221,7 +206,7 @@ def delete_book(model: CSVDataModel, book_id: int):
     model.delete_entry("reading", "book_id", book_id)
 
 def manage_books_table(model: CSVDataModel, mode: str):
-    title, results = prompt_for_title(model)
+    title, results = manage.prompt_for_title("csv", model)
 
     if mode == "add":
         if len(results) == 0:
@@ -235,7 +220,7 @@ def manage_books_table(model: CSVDataModel, mode: str):
     else:
         while len(results) == 0:
             print(f"\"{title}\" does not exist in the books database.")
-            title, results = prompt_for_title(model)
+            title, results = manage.prompt_for_title("csv", model)
         if mode == "edit":
             edit_book(model, results[title])
         else:
@@ -268,7 +253,7 @@ def delete_genre(model: CSVDataModel, genre_id):
 
 
 def manage_genres_table(model: CSVDataModel, mode: str):
-    genre_name, genre_result = prompt_for_genre(model)
+    genre_name, genre_result = manage.prompt_for_genre("csv", model)
 
     if mode == "add":
         if len(genre_result) == 0:
@@ -278,7 +263,7 @@ def manage_genres_table(model: CSVDataModel, mode: str):
     else:
         while len(genre_result) == 0:
             print(f"{genre_name} does not exist in the genres database")
-            genre_name, genre_result = prompt_for_genre(model)
+            genre_name, genre_result = manage.prompt_for_genre("csv",model)
 
         if mode == "edit":
             genre_id = genre_result[genre_name]

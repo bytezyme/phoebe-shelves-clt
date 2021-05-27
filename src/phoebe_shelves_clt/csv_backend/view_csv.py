@@ -117,3 +117,11 @@ def main(db_select: str, mode: str, model: CSVDataModel):
     
     if mode == "table":
         print_table(db.fillna(""))
+    elif mode == "chart":
+        # TODO: Implement chart visualization
+        # ? TEMP TABLE: books_friendly/reading_friendly
+        print("Chart visualization is not currently implemented.")
+    elif mode == "stats":
+        # TODO: Implement aggregate statistics
+        # ? TEMP TABLE: books_friendly/reading_friendly
+        print("Chart visualization is not currently implemented.")

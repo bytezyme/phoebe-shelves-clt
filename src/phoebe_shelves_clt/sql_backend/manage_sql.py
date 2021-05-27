@@ -26,79 +26,6 @@ from phoebe_shelves_clt import manage
 
 ### ----------- Getting Details --------------- ###
 
-def prompt_for_title(conn) -> Tuple[str, Dict]:
-    """ Prompt for a title from the books database and return query results.
-
-    Prompts the user to provide a title and returnsn the title and ID of any
-    books that match the title *exactly*.
-
-    Args:
-        conn (psycopg2.connection): Connection to the PostgreSQL database.
-    
-    Returns:
-        A tuple contaning the following:
-
-        title (str): User-provided title
-        query_results (Dict[str, int]): Results as a dictionary mapping from
-            the title to the ID..\
-
-    Todos:
-        * Merge with existing CSV implementation
-    """
-    title = input("Please enter the book title: ")
-    query = f"SELECT title, id FROM books WHERE title ILIKE '{title}'"
-    query_results = dict(sql_api.execute_query(conn, query,
-                                               "to_list"))  # type: ignore
-    return(title, query_results)
-
-
-def prompt_for_author(conn) -> Tuple[str, Dict]:
-    """ Prompt a user for the initial author information.
-
-    Prompts the user to input the last name of an author and returns
-    a list of possible matches based on the last name only.
-
-    Args:
-        conn (psycopg2.connection): Connection to the PostgreSQL database.
-
-    Returns:
-        A tuple containing the following information:
-
-        last_name (str): Last name provided by the user
-        author_results: Dictionary mapping the names of possible author
-            matches to their author_id 
-
-    """
-    last_name = input("Please enter the author's last name: ")
-    author_query = (sql_api.read_query('author_filter').format(last_name))
-    author_results = dict(sql_api.execute_query(conn, author_query,
-                                                "to_list"))  # type: ignore
-    return(last_name, author_results)
-
-
-def prompt_for_genre(conn) -> Tuple[str, Dict]:
-    """ Prompt the user to select a genre
-
-    Prompts user to enter a genre name. It then retrieves the potential
-    matching options for further processing.
-
-    Args:
-        conn (psycopg2.connection): Connection to the PostgreSQL database.
-
-    Returns:
-        A tuple containing the following information:
-
-        genre_name (str): Name of the genre provided by the user
-        genre_results (Dict): Dictionary mapping the names of potential genre
-            matches to their genre_id
-    """
-    genre_name = input("Please enter the genre name: ")
-    genre_query = f"SELECT name, id from genres where name ilike '{genre_name}'"
-    genre_results = dict(sql_api.execute_query(conn, genre_query,
-                                               "to_list"))  # type: ignore
-    return(genre_name, genre_results)
-
-
 def get_reading_entries(conn, book_id: int) -> List:
     """ Retrieves reading entries associated with a book
 
@@ -135,7 +62,7 @@ def select_author(conn):
     Returns:
         author_id (int): Unique ID of the selected author.
     """
-    last_name, author_results = prompt_for_author(conn)
+    last_name, author_results = manage.prompt_for_author("sql", conn)
 
     if len(author_results) == 0:
         author_id = add_author(conn, last_name)
@@ -167,7 +94,7 @@ def select_book(conn) -> Tuple[str, int]:
         title: The title that the user provided.
         book_id: Unique ID for the selected book.
     """
-    title, title_results = prompt_for_title(conn)
+    title, title_results = manage.prompt_for_title("sql", conn)
 
     if len(title_results) == 0:
         book_id = add_book(conn, title)
@@ -316,7 +243,7 @@ def manage_books_table(conn, mode: str):
         conn (psycopg2.connection): Connection to the PostgreSQL database.
         mode: Indicates whether to use the add, edit, or delete processes.
     """
-    title, results = prompt_for_title(conn)
+    title, results = manage.prompt_for_title("sql", conn)
     
     if mode == "add":
         if len(results) == 0:
@@ -330,7 +257,7 @@ def manage_books_table(conn, mode: str):
     else:
         while len(results) == 0:
             print(f"\"{title}\" does not exist in the books database.")
-            title, results = prompt_for_title(conn)
+            title, results = manage.prompt_for_title("sql", conn)
         if mode == "edit":
             edit_book(conn, results[title])
         else:
@@ -579,7 +506,7 @@ def manage_authors_table(conn, mode: str):
         conn (psycopg2.connection): Connection to the PostgreSQL database.
         mode: Indicates whether to use the add, edit, or delete processes.
     """
-    last_name, author_results = prompt_for_author(conn)
+    last_name, author_results = manage.prompt_for_author("sql", conn)
     if mode == "add":
         if len(author_results) == 0:
             add_author(conn, last_name)
@@ -681,7 +608,7 @@ def manage_genres_table(conn, mode: str):
         conn (psycopg2.connection): Connection to the PostgreSQL database.
         mode: Indicates whether to use the add, edit, or delete processes.
     """
-    genre_name, genre_result = prompt_for_genre(conn)
+    genre_name, genre_result = manage.prompt_for_genre("sql", conn)
 
     if mode == "add":
         if len(genre_result) == 0: 
@@ -692,7 +619,7 @@ def manage_genres_table(conn, mode: str):
     else:
         while len(genre_result) == 0:
             print(f"{genre_name} does not exist in the genres database")
-            genre_name, genre_result = prompt_for_genre(conn)
+            genre_name, genre_result = manage.prompt_for_genre("sql", conn)
 
         if mode == "edit":
             genre_id = genre_result[genre_name]
