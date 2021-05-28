@@ -127,24 +127,30 @@ def date_filter(table: str, column: str, backend: str, **kwargs) -> Union[str, D
 
     if backend == "csv":
         filter_function = retrieve_filter_function(backend, table, kwargs["model"])
+        as_string = False  # Need to set different prompt_for_date formats
     else:
         filter_function = retrieve_filter_function(backend, table)
+        as_string = True
 
     if threshold_mode == 1:
-        early_date = inputs.prompt_for_date(early_date_prompt, as_string=True)
+        early_date = inputs.prompt_for_date(early_date_prompt,
+                                            as_string=as_string)
         return(filter_function(column, comp_type=threshold_mode,
                               thresholds=[early_date]))
     elif threshold_mode == 2:
-        late_date = inputs.prompt_for_date(late_date_prompt, as_string=True)
+        late_date = inputs.prompt_for_date(late_date_prompt,
+                                           as_string=as_string)
         return(filter_function(column, comp_type=threshold_mode,
                               thresholds=[late_date]))
     elif threshold_mode == 3:
-        early_date = inputs.prompt_for_date(early_date_prompt, as_string=True)
-        late_date = inputs.prompt_for_date(late_date_prompt, as_string=True)
+        early_date = inputs.prompt_for_date(early_date_prompt,
+                                            as_string=as_string)
+        late_date = inputs.prompt_for_date(late_date_prompt,
+                                           as_string=as_string)
         return(filter_function(column, comp_type=threshold_mode,
                               thresholds=[early_date, late_date]))
     elif threshold_mode == 4:
-        year = inputs.prompt_for_date(year_prompt, as_string=True)
+        year = inputs.prompt_for_date(year_prompt, as_string=as_string)
         return(filter_function(column, comp_type=threshold_mode,
                               thresholds=[year]))
 
