@@ -11,6 +11,7 @@ from phoebe_shelves_clt import manage
 from phoebe_shelves_clt import initialize
 from phoebe_shelves_clt import view
 from phoebe_shelves_clt import configure
+from phoebe_shelves_clt.utils import data_model
 
 
 def main():
@@ -41,11 +42,10 @@ def main():
             if args.tool == "init":
                 if args.path:
                     configs = configure.update_config(config_path, configs,
-                                                      "data_dir", args.path)
-
+                                                    "data_dir", args.path)
                 data_dir = configs.get("GENERAL", "data_directory")
                 initialize.init_module("csv", args.force,
-                                       data_directory=data_dir)
+                                        data_directory=data_dir)
             elif args.tool == "view":
                 data_dir = configs.get("GENERAL", "data_directory")
                 view.view_module("csv", args.database, args.mode,

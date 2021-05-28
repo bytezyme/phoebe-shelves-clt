@@ -8,6 +8,7 @@ tests
 data/books.csv
 data/reading.csv
 data/test.png
+data/backend
 *config.cfg
 
 # Development

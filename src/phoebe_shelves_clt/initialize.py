@@ -29,15 +29,16 @@ def create_database(path: str, name: str, cols: List[str],
     db_exists = os.path.isfile(path)
 
     if db_exists and not force_overwrite:
-        prompt = (f'The {name} database already exists. Would you like to '
-                  'overwrite the existing database?')
+        prompt = (f"The {name} database already exists. Would you like to "
+                  "overwrite the existing database?")
         create_db = inputs.confirm(prompt)
     else:
         create_db = True
 
     if create_db:
         pd.DataFrame(columns=cols).to_csv(path, index=False)
-        print(f'Successfully created the {name} database!')
+        print(f"Successfully created the {name} database!")
+
 
 def create_table(conn, force_overwrite: bool, table_name: str):
     """ Creates the indicated table in the backend SQL database
@@ -53,6 +54,7 @@ def create_table(conn, force_overwrite: bool, table_name: str):
     """
     query = sql_api.read_query(f"create_{table_name}_table")
     sql_api.create_table(conn, query, table_name, force_overwrite)
+
 
 def init_module(backend: str, force_overwrite: bool, **kwargs):
     """ Creates initial book and reading date csv files if not present
@@ -71,17 +73,42 @@ def init_module(backend: str, force_overwrite: bool, **kwargs):
     """
     if backend == "csv":
         data_directory = kwargs["data_directory"]
-        books_path = data_directory + '/books.csv'
-        reading_path = data_directory + '/reading.csv'
+        books_path = data_directory + "/backend/books.csv"
+        reading_path = data_directory + "/backend/reading.csv"
+        authors_path = data_directory + "/backend/authors.csv"
+        genres_path = data_directory + "/backend/genres.csv"
+        series_path = data_directory + "/backend/series.csv"
+        books_authors_path = data_directory + "/backend/books_authors.csv"
+        books_genres_path = data_directory + "/backend/books_genres.csv"
+        books_series_path = data_directory + "/backend/books_series.csv"
 
-        # Books Database
-        books_cols = ['Title', 'Author', 'Author FN', 'Author MN',
-                    'Author LN', 'Length', 'Times Read', 'Rating', 'Genre']
+        books_cols = ["id", "title", "book_length", "rating"]
         create_database(books_path, 'books', books_cols, force_overwrite)
 
-        # Reading Database
-        reading_cols = ['Title', 'Start', 'Finish', 'Reading Time', 'Rating']
-        create_database(reading_path, 'reading', reading_cols, force_overwrite)
+        reading_cols = ["id", "book_id", "start_date", "finish_date", "rating"]
+        create_database(reading_path, "reading", reading_cols, force_overwrite)
+
+        authors_cols = ["id", "first_name", "middle_name", "last_name", "suffix"]
+        create_database(authors_path, "authors", authors_cols, force_overwrite)
+
+        genres_cols = ["id", "name"]
+        create_database(genres_path, "genres", genres_cols, force_overwrite)
+
+        series_cols = ["id", "name"]
+        create_database(series_path, "series", series_cols, force_overwrite)
+
+        books_authors_cols = ["book_id", "author_id"]
+        create_database(books_authors_path, "books_authors",
+                        books_authors_cols, force_overwrite)
+
+        books_genres_cols = ["book_id", "genre_id"]
+        create_database(books_genres_path, "books_genres",
+                        books_genres_cols, force_overwrite)
+
+        books_series_cols = ["book_id", "series_id"]
+        create_database(books_series_path, "books_series",
+                        books_series_cols, force_overwrite)
+
     else:
         sql_configs = kwargs["sql_configs"]
         conn = sql_api.connect_to_database(sql_configs["user"],

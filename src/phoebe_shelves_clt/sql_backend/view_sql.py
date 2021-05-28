@@ -1,7 +1,11 @@
-""" Visualization of books data
+""" Visualization of the database using the SQL backend
 
-Visualize data about the books database. This module utilizes the aggregated
-books database for a more user-friendly format.
+Visualize the backend database with options to filter, aggregate,
+and transform the data into other formats using the SQL backend.
+
+Todo:
+    * Implement chart-based visualization using graphing modules
+    * Implement aggregate statistics characterizations. 
 """
 
 from typing import Dict
@@ -9,6 +13,7 @@ from typing import Dict
 from phoebe_shelves_clt.sql_backend import queries
 from phoebe_shelves_clt.utils import sql_api
 from phoebe_shelves_clt.utils import inputs
+from phoebe_shelves_clt import view
 
 def print_table(conn, query: str):
     """ Prints SQL query result as formatted table
@@ -25,129 +30,6 @@ def print_table(conn, query: str):
 
 
 ## --------------- Basic Filters --------------- ##
-
-def numeric_filter(table: str, column: str) -> str:
-    """ Generate a numeric filter based on user input
-
-    Generates the correct SQL filter using numeric thresholds provided by the
-    user via interactive command-line prompts.
-
-    Args:
-        table: Name of the table being used
-        column: Column to filter on
-    
-    Returns:
-        SQL query with appropriate filters
-    """
-
-    threshold_prompt = ("Would you like to filter based on a [1] ≤ threshold, "
-                        "[2] ≥ threshold, [3] range, or [4] missing values?: ")
-    threshold_mode = inputs.prompt_from_choices([1,2,3,4], threshold_prompt)
-    lower_thresh_prompt = "What's the smallest value (inclusive)?: "
-    upper_thresh_prompt = "What's the largest_value (inclusive)?: "
-
-    if table == "reading":
-        query_function = queries.main_reading_query
-    else:
-        query_function = queries.main_books_query
-
-    if threshold_mode == 1:
-        lower_thresh = inputs.prompt_for_pos_int(lower_thresh_prompt)
-        return(query_function(column, comp_type=threshold_mode,
-                              thresholds=[lower_thresh]))
-    elif threshold_mode == 2:
-        upper_thresh = inputs.prompt_for_pos_int(upper_thresh_prompt)
-        return(query_function(column, comp_type=threshold_mode,
-                              thresholds=[upper_thresh]))
-    elif threshold_mode == 3:
-        lower_thresh = inputs.prompt_for_pos_int(lower_thresh_prompt)
-        upper_thresh = inputs.prompt_for_pos_int(upper_thresh_prompt)
-        return(query_function(column, comp_type=threshold_mode,
-                              thresholds=[lower_thresh, upper_thresh]))
-    else:  # threshold_mode == 4
-        return(query_function(column, comp_type=threshold_mode, thresholds=[]))
-
-
-def date_filter(table: str, column: str) -> str:
-    """ Generates a date filter based on user input.
-
-    Generates a SQL query that will filter the given table based on dates.
-
-    Args:
-        table: Name of the table being used
-        column: Column to filter on
-    
-    Returns:
-        SQL query with appropriate filters
-    """
-    threshold_prompt = ("Would you like to filter based on an [1] earliest date "
-                        "(anytime after), [2] latest date (anytime before), "
-                        "[3] range of dates, [4] specific year, or [5] "
-                        "missing dates?: ")
-    threshold_mode = inputs.prompt_from_choices([1,2,3,4,5], threshold_prompt)
-    early_date_prompt = "What's the earliest date (inclusive)?: "
-    late_date_prompt = "What's the latest date (inclusive)?: "
-    year_prompt = "What year would you like to view?: "
-
-    if table == "reading":
-        query_function = queries.main_reading_query
-    else:
-        query_function = queries.main_books_query
-
-    if threshold_mode == 1:
-        early_date = inputs.prompt_for_date(early_date_prompt, as_string=True)
-        return(query_function(column, comp_type=threshold_mode,
-                              thresholds=[early_date]))
-    elif threshold_mode == 2:
-        late_date = inputs.prompt_for_date(late_date_prompt, as_string=True)
-        return(query_function(column, comp_type=threshold_mode,
-                              thresholds=[late_date]))
-    elif threshold_mode == 3:
-        early_date = inputs.prompt_for_date(early_date_prompt, as_string=True)
-        late_date = inputs.prompt_for_date(late_date_prompt, as_string=True)
-        return(query_function(column, comp_type=threshold_mode,
-                              thresholds=[early_date, late_date]))
-    elif threshold_mode == 4:
-        year = inputs.prompt_for_date(year_prompt, as_string=True)
-        return(query_function(column, comp_type=threshold_mode,
-                              thresholds=[year]))
-
-    else:
-        return(query_function(column, comp_type=threshold_mode, thresholds=[]))
-
-def options_filter(conn, table: str, column: str) -> str:
-    """ Filter based on a set of options
-
-    Filter the data based on a finite number of options.
-
-    Args:
-        conn (psycopg2.connection): Connection to the PostgreSQL database
-        table: Name of the table to filter
-        column: Name of the column to filter on
-
-    Returns:
-        SQL query with the appropriate filters
-    """
-
-    # Get correct options List
-    if column == "Title":
-        opts_dict = queries.retrieve_books_list(conn)
-    elif column == "Author":
-        opts_dict = queries.retrieve_authors_list(conn)
-    else:
-        opts_dict = queries.retrieve_genres_list(conn)
-
-    # Select option
-    id_list = []
-    print(f"\nChoose from the {column.lower()} list below.")
-    selection = inputs.prompt_from_choices(list(opts_dict.keys()))
-    id_list.append(opts_dict[selection])
-
-    # Generate the appropriate query
-    if table == "books":
-        return(queries.main_books_query(filter=column, id_list=id_list))
-    else:
-        return(queries.main_reading_query(filter=column, id_list=id_list))
 
 
 def reading_filter(conn) -> str:
@@ -166,11 +48,12 @@ def reading_filter(conn) -> str:
     selection = inputs.prompt_from_choices(opts)
 
     if selection in {"Title", "Author"}:
-        return(options_filter(conn, "reading", selection))
+        return(view.options_filter("reading", selection, "sql",
+                                   conn=conn)) # type: ignore
     elif selection in {"Start", "Finish"}:
-        return(date_filter("reading", selection))
+        return(view.date_filter("reading", selection, "sql"))  # type: ignore
     else:  # Reading Time and Rating
-        return(numeric_filter("reading", selection))
+        return(view.numeric_filter("books", selection, "sql"))  # type: ignore
 
 
 def books_filter(conn) -> str:
@@ -190,9 +73,10 @@ def books_filter(conn) -> str:
     selection = inputs.prompt_from_choices(opts)
 
     if selection in {"Title", "Author", "Genre"}:
-        return(options_filter(conn, "books", selection))
+        return(view.options_filter("reading", selection, "sql",
+                                   conn=conn)) # type: ignore
     else: # "Times Read", "Rating"
-        return(numeric_filter("books", selection))
+        return(view.numeric_filter("books", selection, "sql"))  # type: ignore
 
 def main(db_select: str, mode: str, sql_configs: Dict[str, str]):
     """ Main module function

@@ -1,528 +1,600 @@
+""" Add, edit, or delete entries in the CSV backend database.
+
+This module provides the primary functionality for adding, editing, or
+deleting entries in the backend databases. The initial argument parsing methods
+determine which database and mode to use while all other information is
+request from the user using interactive prompts.
+
+    Typical usage example:
+        manage_csv(args.database, args.mode, model)
+
+Todos:
+    * Add support for using the series table
+    * Add support for adding multiple authors/genres in the edit book function
+    * Merge with SQL backend implementation
+"""
+
+from typing import Dict, Any, Union, List, Tuple
+
 import numpy as np
 import pandas as pd
 
 from phoebe_shelves_clt.utils import inputs
 from phoebe_shelves_clt.csv_backend import view_csv
 from phoebe_shelves_clt import manage
+from phoebe_shelves_clt.utils import data_model
 
-def prompt_for_title(db, mode):
-    """Request user to enter an acceptable book title
+CSVDataModel = data_model.CSVDataModel
 
-    Adding a book can accept any potential title. There are custom actions to
-    deal with cases for the books and reading databases defined in the
-    related functions. The other two update modes will only accept a title that
-    already exists in a database. This is a specialized case because editing or
-    removing a title requires it to already be present.
+### ------------- Selections ------------- ###
 
-    Args:
-        db {DataFrame} -- DataFrame of books or reading entries
-        mode {Int} -- [1] Add, [2] Edit, or [3] Remove
+def select_author(model: CSVDataModel):
+    """ Selects an author from the authors table and returns its ID.
 
-    Outputs:
-        book_title {string} -- Title of the book to use
-    """
-
-    book_title = book_title = input('Please enter the book title: ')
-
-    if mode == 'add':
-        return(book_title)
-    else:
-        while book_title not in db['Title'].values:
-            book_title = input('Book doesn\'t exist. '
-                               'Please reenter the title: ')
-        return(book_title)
-
-
-def prompt_for_property(property_list):
-    """Consolidate general property prompt
-
-    Requests user to select a property from the database to edit and the
-    corresponding new value. The "title" is treated differently because edit
-    mode enable the user to change a title to something not present
+    Prompts the user to begin providing author last name and compares
+    it against existing authors. If there are now potentially existing authors,
+    the user is prompted to create a new entry. If the author may already
+    exist, they are provided the option to select from a potentia; list or
+    create a new author.
 
     Args:
-        prop_dict {dict} -- Dictioanry mapping acceptable user inputs to a prop
-
-    Outputs:
-        new_value {string} -- String representation of the updated value
-        prop_to_update {string} -- Name of the property to update
+        model: Current CSVDataModel instance
+    
+    Returns:
+        author_id (int): Unique ID of the selected author.
     """
+    last_name, author_results = manage.prompt_for_author("csv", model)
 
-    prop_to_update = inputs.prompt_from_choices(property_list)
-    update_prompt = f'What is the new {prop_to_update} value?: '
-
-    # Use date parser if 'Start' or 'Finish
-    if prop_to_update == 'Start' or prop_to_update == 'Finish':
-        new_val = inputs.prompt_for_date(update_prompt)
-    elif prop_to_update == 'Rating':
-        new_val = manage.prompt_for_rating(update_prompt)
+    if len(author_results) == 0:
+        author_id = add_author(model, last_name)
     else:
-        new_val = input(update_prompt)
-    return((new_val, prop_to_update))
-
-def prompt_for_author(books_db):
-    """Prompt the user for author name details
-
-    This function will prompt the user for details to fill out the full
-    author name. It provides logic for searching the existing list of authors
-    for a potential match (i.e., autofill).
-
-    Inputs:
-        books_db {Dataframe} -- Dataframe of exisiting books
-
-    Outputs:
-        author_fn {string} -- Author's first name
-        author_mn {string} -- Author's middle name
-        author_ln {string} -- Author's last name
-    """
-
-    author_ln = input('Author Last Name: ')
-    # Return list of names that share the last name
-    author_list = list(books_db.loc[books_db['Author LN'] == author_ln,
-                                    'Author'].unique())
-
-    # Two Options: Either there are options or there are none:
-    if len(author_list) == 0:
-        author_fn = input('Author First Name: ')
-        author_mn = input('Author Middle Name (Optional): ')
-    else:
-        # Allow user to select from existing list or indicate new author
-        print('The author may already exist. Select one of the following '
-              'options to select an existing author or the last option to add '
-              'a new author.')
-
-        # Add New Author as options to author list
-        author_list.append('New Author')
-
-        author_select = inputs.prompt_from_choices(author_list)
-
-        # Two cases: select new author or not:
-        if author_select == 'New Author':
-            print('Provide the following information for a new author.')
-            author_fn = input('Author First Name: ')
-            author_mn = input('Author Middle Name (Optional): ')
+        author_options = list(author_results.keys()) + ["New Author"]
+        author_select = inputs.prompt_from_choices(author_options)
+        if author_select == "New Author":
+            author_id = add_author(model, last_name)
         else:
-            author_filter = books_db['Author'] == author_select
-            author_index = books_db[author_filter].index[0]  # Need 1st index
-            author_fn = books_db.loc[author_index, 'Author FN']
-            author_mn = books_db.loc[author_index, 'Author MN']
-
-    # Need to fix np.nan for author middle name is nothing is passed!
-    if type(author_mn) != str:
-        author_mn = ''
-
-    return(author_fn, author_mn, author_ln)
+            author_id = author_results[author_select]
+    return(author_id)
 
 
-def generate_full_author(author_fn, author_mn, author_ln):
-    """Combines author names into a single column
+def select_book(model: CSVDataModel) -> Tuple[str, int]:
+    """ Selects a book from the books table and returns its ID.
+
+    Prompts the user to provide an initial title and compares against existing
+    books in the books table. If the book doesn't exist, the user can create a
+    new entry. If the book may exist, the user will select from a list of
+    possible options. They can select from the list or create a new entry from
+    the title they initialy entered.
 
     Args:
-        author_fn {string} -- Author first name
-        author_mn {string} -- Author middle name
-        author_ln {string} -- Author last name
+        model: Current CSVDataModel instance
+    
+    Returns:
+        A tuple containing the following information:
 
-    Outputs:
-        author {string} -- Combined author name (First, Middle, Last)
+        title: The title that the user provided.
+        book_id: Unique ID for the selected book.
     """
+    title, title_results = manage.prompt_for_title("csv", model)
 
-    names = [name for name in [author_fn, author_mn, author_ln] if name != '']
-    author = ' '.join(names)
-    return(author)
-
-
-def add_new_book(books_db, book_title):
-    """Adds a new book to the book database
-
-    Args:
-        books_db {DataFrame} -- DataFrame representation of the books database
-        book_title {string} -- Title of book to add to the database
-
-    Outputs:
-        books_db {DataFrame} -- DataFrame representation with new book
-    """
-
-    # Request the basic information
-    print('Please enter the following optional information:')
-
-    author_fn, author_mn, author_ln = prompt_for_author(books_db)
-    author = generate_full_author(author_fn, author_mn, author_ln)
-
-    while True:
-        book_length = input('Book Length (Pages): ')
-
-        if book_length == '':
-            break
+    if len(title_results) == 0:
+        book_id = add_book(model, title)
+    else:
+        title_opts = list(title_results.keys()) + ["New Book"]
+        title_select = inputs.prompt_from_choices(title_opts)
+        if title_select == "New Book":
+            book_id = add_book(model, title)
         else:
-            try:
-                book_length = int(book_length)
-                break
-            except ValueError:
-                print('Please leave blank or enter an integer.\n')
-
-    book_genre = input('Book Genre: ')
-
-    new_book = {'Title': book_title,
-                'Author FN': author_fn,
-                'Author MN': author_mn,
-                'Author LN': author_ln,
-                'Author': author,
-                'Length': book_length,
-                'Genre': book_genre}
-
-    # Append to database in memory
-    return(books_db.append(new_book, ignore_index=True))
+            book_id = title_results[title_select]
+    return(title, book_id)
 
 
-def edit_existing_book(books_db, book_title):
-    """Edits an exisiting book in the database
+def select_genre(model: CSVDataModel) -> int:
+    """ Selects a genre from the genres table and returns its ID.
+
+    Prompts the user to select from the existing list of genres or to create
+    a new genre.
 
     Args:
-        books_db {DataFrame} -- DataFrame representation of the books database
-        book_title {string} -- Title of book to edit
+        model: Current CSVDataModel instance
 
-    Outputs:
-        books_db {DataFrame} -- DataFrame representation with edited properties
+    Returns:
+        genre_id (int): Unique ID for the selected genre.
     """
+    genres_dict = model.get_genres_dict()
+    genre_options = list(genres_dict.keys()) + ["New Genre"]
+    print("\nSelect from the following choices to choose a genre.")
+    genre_select = inputs.prompt_from_choices(genre_options)
 
-    print('Which property would you like to edit?')
+    if genre_select == "New Genre":
+        new_genre = input("Please enter the new genre's name: ")
+        genre_id = add_genre(model, new_genre)
+    else:
+        genre_id = genres_dict[genre_select]
 
-    property_list = books_db.columns.drop(['Author', 'Times Read'])
-
-    new_value, prop_to_update = prompt_for_property(property_list)
-
-    # Change type as needed:
-    if prop_to_update == 'Length':
-        new_value = int(new_value)
-    elif prop_to_update == 'Rating':
-        new_value = float(new_value)
-
-    # Update Value
-    books_db.loc[books_db['Title'] == book_title, prop_to_update] = new_value
-
-    # Need special case to update combined author if needed
-    if prop_to_update in ['Author FN', 'Author MN', 'Author LN']:
-        author_fn = books_db.loc[books_db['Title'] == book_title,
-                                 'Author FN'].values[0]
-        author_mn = books_db.loc[books_db['Title'] == book_title,
-                                 'Author MN'].values[0]
-
-        # Fix if missing value
-        author_fn = '' if pd.isna(author_fn) else author_fn
-        author_mn = '' if pd.isna(author_mn) else author_mn
-
-        author_ln = books_db.loc[books_db['Title'] == book_title,
-                                 'Author LN'].values[0]
-        books_db.loc[books_db['Title'] == book_title, 'Author'] = \
-            generate_full_author(author_fn, author_mn, author_ln)
-
-    return(books_db)
+    return(genre_id)
 
 
-def delete_existing_book(books_db, book_title):
-    """Removes an existing book from the database
+
+### –------------ Mange Authors ------------- ###
+
+
+def add_author(model: CSVDataModel, last_name: str) -> int:
+    """ Adds a new author to the author table
+
+    Adds a new author to the authors table and new entries for all of the other
+    tables, as needed.
 
     Args:
-        books_db {DataFrame} -- DataFrame representation of the books database
-        book_title {string} -- Title of book to remove
-
-    Outputs:
-        books_db {DataFrame} -- DataFrame with book_title removed
+        model: Current CSVDataModel instance
+        last_name: Last name of the author to add
+        
+    Returns:
+        author_id: Unique ID of the new author entry.
     """
 
-    return(books_db.drop(books_db[books_db['Title'] == book_title].index))
+    cols_to_fill = ["last_name"]
+    vals_to_fill = [last_name]
+
+    first_name = input("Please enter the author's first name: ")
+    middle_name = input("Please enter the author's middle name (Optional): ")
+    suffix = input("Please enter the author's suffix (Optional): ")
+
+    if first_name != "":
+        cols_to_fill.append("first_name")
+        vals_to_fill.append(first_name)
+    if middle_name != "":
+        cols_to_fill.append("middle_name")
+        vals_to_fill.append(middle_name)
+    if suffix != "":
+        vals_to_fill.append(suffix)
+
+    new_entry: Dict[str, Any] = dict(zip(cols_to_fill, vals_to_fill))
+    entry_id = model.add_entry("authors", new_entry)
+
+    return(entry_id)  # type: ignore - Cannot parse dynamic type
 
 
-def update_books_db(mode, data_directory):
-    """Main function to update book database
+def edit_author(model: CSVDataModel, author_id: int):
+    """ Edit an existing entry in the author table
+
+    Prompts the user to 1) select a property to modify and 2) provide the
+    new value for the property. Then, it generates and executes the correct
+    update query to modify an existing author entry.
 
     Args:
-        mode {string} -- Update mode
-        data_directory {string} -- Path to the data directory
-
-    Outputs:
-        Saves an updated book database as a csv to the disk
+        model: Current CSVDataModel instance
+        author_id: ID of the author entry to edit.
     """
+    cols_dict = {
+        "First Name": "first_name",
+        "Middle Name": "middle_name",
+        "Last Name": "last_name",
+        "Suffix": "suffix"
+    }
 
-    # Read in saved database
-    books_db_path = data_directory + '/' + 'books.csv'
-    books_db = pd.read_csv(books_db_path)
+    print("\nWhich author property would you like to modify?")
+    col_select = inputs.prompt_from_choices(list(cols_dict.keys()))
+    new_value = input(f"\nWhat is the new {col_select.lower()}?: ")
+    model.edit_entry("authors", "id", author_id, cols_dict[col_select], new_value)
 
-    book_title = prompt_for_title(books_db, mode)
 
-    if mode == 'add':
+def delete_author(model: CSVDataModel, author_id: int):
+    """ Delete a book entry from the author database
 
-        # Need to check case where book actually already exists
-        if book_title in books_db['Title'].values:  # type: ignore
-            print(f'{book_title} already exists in the database. Adding a new '
-                  'entry will overwrite the existing data!')
-            switch_prompt = ('Would you like to edit the existing entry '
-                             'instead?')
-            if inputs.confirm(switch_prompt):
-                books_db = edit_existing_book(books_db, book_title)
+    Deletes the author entry associated with a given ID from the author table
+    This deletion will cascade to all associated entries with the author ID in
+    other tables in the database.
+
+    Args:
+        model: Current CSVDataModel instance
+        author_id: ID of the author entry to delete
+    """
+    model.delete_entry("authors", "id", author_id)
+    model.delete_entry("books_authors", "author_id", author_id)
+
+
+def manage_authors_table(model: CSVDataModel, mode: str):
+    """ Parent function for managing the entries in the authors table
+
+    Controls the execution of different management modes for the authors table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        model: Current CSVDataModel instance
+        mode: Indicates whether to use the add, edit, or delete processes.
+    """
+    last_name, author_results = manage.prompt_for_author("csv", model)
+    if mode == "add":
+        if len(author_results) == 0:
+            _ = add_author(model, last_name)
+        else:
+            print("")
+            for author in author_results.keys():
+                print(author)
+            print("")
+            if not inputs.confirm("Does the author appear in above list?"):
+                _ = add_author(model, last_name)
             else:
-                books_db.drop(books_db[books_db['Title'] == book_title].index, # type: ignore
-                              inplace=True) 
-                books_db = add_new_book(books_db, book_title)
+                print("Cannot add a duplicate author to the database.")
+    else:
+        if len(author_results) == 0:
+            print("There are no existing authors with that last name.")
         else:
-            books_db = add_new_book(books_db, book_title)
-    elif mode == 'edit':
-        books_db = edit_existing_book(books_db, book_title)
-    else:
-        books_db = delete_existing_book(books_db, book_title)
-
-    # Sort books by author last name
-    books_db = books_db.sort_values(by=['Author LN', 'Title'], # type: ignore
-                                    ignore_index=True)
-    books_db.to_csv(books_db_path, index=False)
-
-
-def update_reading_time(start, finish):
-    """Calculate reading time using start and finish dates
-
-    Args:
-        start {datetime} -- Start date
-        finish {datetime} -- Finish date
-
-    Outputs:
-        Reading time (in days) or pd.NaT is missing a start/finish date
-    """
-
-    if pd.isnull(start) or pd.isnull(finish):
-        return(pd.NaT)
-    else:
-        return((finish - start).days + 1)
-
-
-def update_reading_count(reading_db, books_db, book_title):
-    """ pdate reading count in books.csv from reading entries
-
-    Args:
-        reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        books_db {DataFrame} -- Pandas DataFrame of the books database
-        book_title -- Title of book to use for the entry
-
-    Outputs:
-        books_db {DataFrame} -- Updated books DataFrame
-    """
-
-    # Calculate read count
-    title_filter = reading_db['Title'] == book_title
-    finish_filter = reading_db['Finish'].notna()
-
-    read_cnt = int(reading_db.loc[title_filter & finish_filter].shape[0])
-
-    books_db.loc[books_db['Title'] == book_title, 'Times Read'] = read_cnt
-    return(books_db)
-
-
-def update_book_rating(reading_db, books_db, book_title):
-    """Propogates average rating to the book database
-
-    Args:
-        reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        books_db {DataFrame} -- Pandas DataFrame of the books database
-        book_title -- Title of book to use for the entry
-
-    Outputs:
-        books_db {DataFrame} -- Updated books DataFrame
-    """
-
-    # Filter and Make sure we create numerics for rating
-    title_filter = reading_db['Title'] == book_title
-    avg_rating = reading_db.loc[title_filter, 'Rating'].mean()
-
-    # Only update book database if we can calculate an average
-    if pd.notna(avg_rating):
-        avg_rating = round(avg_rating, 1)
-
-    books_db.loc[books_db['Title'] == book_title, 'Rating'] = avg_rating
-    return(books_db)
-
-
-def propogate_to_book_db(reading_db, data_directory, book_title, mode):
-    """Propogate reading database updates to the books database
-
-    Args:
-        reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        data_directory {string} -- Path to database directory
-        book_title {string} -- Book title
-        mode {string} -- Add/Edit/Remove mode indicator
-
-    Outputs:
-        Saves the updated books database as a csv to the data_directory
-    """
-
-    books_db_path = data_directory + '/books.csv'
-    books_db = pd.read_csv(books_db_path)
-    book_exists = book_title in books_db['Title'].values  # type: ignore
-
-    if mode == 'remove' and not book_exists:
-        print('Book doesn\'t exist in the books directory. No updates needed')
-    else:
-        # Add book first if it doesn't exist yet
-        if not book_exists:
-            print(f'Cannot find {book_title} in the books database.')
-            print('Let\'s make a new entry...')
-            books_db = add_new_book(books_db, book_title)
-
-        books_db = update_reading_count(reading_db, books_db, book_title)
-        books_db = update_book_rating(reading_db, books_db, book_title)
-        books_db = books_db.sort_values(by=['Author LN', 'Title'],  # type: ignore
-                                        ignore_index=True)
-        books_db.to_csv(books_db_path, index=False)
-
-
-def add_reading_entry(reading_db, data_directory, book_title):
-    """Adds a new reading entry for a book
-
-    Args:
-        reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        data_directory {string} -- Path to database directory
-        book_title {string} -- Title of book to use for the entry
-
-    Outputs:
-        reading_db {DataFrame} -- DataFrame with new reading entry
-        Saves an updated books database based on the updates
-    """
-
-    print('Please enter the following optional information for a new entry:')
-
-    # Get optional information
-
-    start_date = inputs.prompt_for_date('Start Date: ')
-    finish_date = inputs.prompt_for_date('End Date: ')
-    rating = manage.prompt_for_rating('Rating (1-5): ')
-
-    # Create temporary entry object
-    new_entry_dict = {'Title': book_title,
-                      'Start': start_date,
-                      'Finish': finish_date,
-                      'Reading Time': update_reading_time(start_date,
-                                                          finish_date),
-                      'Rating': rating}
-
-    # Update reading database
-    reading_db = reading_db.append(new_entry_dict, ignore_index=True)
-
-    # Propogate updates to books database
-    propogate_to_book_db(reading_db, data_directory, book_title, 'add')
-
-    return(reading_db)
-
-
-def edit_reading_entry(reading_db, data_directory, book_title):
-    """Edits properties of an existing reading entry
-
-    Args:
-        reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        data_directory {string} -- Path to database directory
-        book_title {string} -- Title of book to filter for the reading entry
-
-    Outputs:
-        reading_db {DataFrame} -- DataFrame with updated entriy
-        Saves an updated books database based on the updates
-    """
-
-    filtered_db = reading_db[reading_db['Title'] == book_title]
-    view_csv.print_db_title(reading_db, book_title)
-
-    edit_prompt = 'Which entry (index) would you like to edit?: '
-    edit_options = filtered_db.index
-    index_to_edit = inputs.prompt_from_choices(edit_options, edit_prompt,
-                                               zero_indexed=True, use_index=False)
-
-    print('Which property would you like to edit?')
-
-    property_list = reading_db.columns.drop('Reading Time')
-
-    new_value, prop_to_update = prompt_for_property(property_list)
-
-    reading_db.loc[index_to_edit, prop_to_update] = new_value
-
-    # Do autoupdate of reading time
-    new_time = update_reading_time(reading_db.loc[index_to_edit, 'Start'],
-                                   reading_db.loc[index_to_edit, 'Finish'])
-    reading_db.loc[index_to_edit, 'Reading Time'] = new_time
-
-    # Propogate changes to books database
-    propogate_to_book_db(reading_db, data_directory, book_title, 'edit')
-
-    return(reading_db)
-
-
-def delete_reading_entry(reading_db, data_directory, book_title):
-    """Removes a reading entry
-
-    Args:
-        reading_db {DataFrame} -- Pandas DataFrame of the reading database
-        data_directory {string} -- Path to database directory
-        book_title {string} -- Title of book to filter for the reading entry
-
-    Outputs:
-        reading_db {DataFrame} -- DataFrame with updated entriy
-        Saves an updated books database based on the updates
-    """
-
-    filtered_db = reading_db[reading_db['Title'] == book_title]
-    view_csv.print_db_title(reading_db, book_title)
-
-    remove_prompt = 'Which entry (index) would you like to remove?: '
-    remove_options = filtered_db.index
-    index_to_remove = inputs.prompt_from_choices(remove_options, remove_prompt,
-                                                 zero_indexed=True)
-    reading_db = reading_db.drop(index_to_remove)
-
-    # Propogation to book database
-    propogate_to_book_db(reading_db, data_directory, book_title, 'remove')
-
-    return(reading_db)
-
-
-def update_reading_db(mode, data_directory):
-    """Main function to update book database
-
-    Args:
-        mode {string} -- Update mode
-        data_directory {string} -- Path to the data directory
-
-    Outputs:
-        Saves an updated reading database as a csv to the disk
-    """
-
-    # Read in reading database
-    reading_db_path = data_directory + '/reading.csv'
-    reading_db = pd.read_csv(reading_db_path)
-
-    # Requires additional formatting for dates
-    reading_db['Start'] = pd.to_datetime(reading_db['Start']).dt.date  # type: ignore
-    reading_db['Finish'] = pd.to_datetime(reading_db['Finish']).dt.date  # type: ignore
-
-    title = prompt_for_title(reading_db, mode)
-
-    if mode == 'add':
-        if title in reading_db['Title'].values:  # type: ignore
-            print(f'An entry for {title} already exists.')
-            switch_prompt = 'Would you like to edit an entry instead?'
-            if inputs.confirm(switch_prompt):
-                reading_db = edit_reading_entry(reading_db, data_directory,
-                                                title)
+            author_options = list(author_results.keys())
+            author_select = inputs.prompt_from_choices(author_options)
+            author_id = author_results[author_select]
+            if mode == "edit":
+                edit_author(model, author_id)
             else:
-                reading_db = add_reading_entry(reading_db, data_directory,
-                                               title)
+                delete_author(model, author_id)
+        
+
+### –------------ Mange Books ------------- ###
+
+def add_book(model: CSVDataModel, title: str) -> int:
+    """ Adds a new book to the database
+
+    Adds a new book to the books table and new entries for all of the other 
+    tables, as needed.
+
+    Args:
+        model: Current CSVDataModel instance
+        title: Title of the new book.
+        
+    Returns:
+        book_id: Unique ID of the new book entry.
+    """
+    author_id = select_author(model)
+    pages = inputs.prompt_for_pos_int("Page length: ")
+    rating = manage.prompt_for_rating("Rating (1-5) (Optional): ")
+    genre_id = select_genre(model)
+
+    #! Does not need same approach as adding a reading entry because there are
+    #! only two potential query statements
+    if rating is np.nan:
+        new_entry = {"title": title, "book_length": pages}
+    else:
+        new_entry = {"title": title, "book_length": pages, "rating": rating}
+
+    book_id = model.add_entry("books", new_entry)
+
+    _ = model.add_entry("books_authors", {"book_id": book_id,
+                                          "author_id": author_id})
+
+    _ = model.add_entry("books_genres", {"book_id": book_id,
+                                          "genre_id": genre_id})
+
+    return(book_id)  # type: ignore - Cannot parse dynamic type
+
+def edit_book(model:CSVDataModel, book_id: int):
+    """ Edit an existing entry in the books database
+
+    Prompts the user to 1) select a property to modify and 2) provide the
+    new value for the property. Then, it runs the correct statements to make
+    the modifications to the existing entry.
+
+    Args:
+        model: Current CSVDataModel instance
+        book_id: ID of the book entry to modify.
+    """
+    cols = ["Title", "Author", "Pages", "Rating", "Genre"]
+    print("\nWhich author property would you like to modify?")
+    col_select = inputs.prompt_from_choices(cols)
+
+    if col_select == "Title":
+        new_title = input("\nWhat is the new title?: ")
+        model.edit_entry("books", "id", book_id, "title", new_title)
+    elif col_select == "Author":
+        author_id = select_author(model)
+        model.edit_entry("books_authors", "book_id", book_id, "author_id", author_id)
+    elif col_select == "Pages":
+        new_pages = inputs.prompt_for_pos_int("New page length: ")
+        model.edit_entry("books", "id", book_id, "book_length", new_pages)
+    elif col_select == "Rating":
+        new_rating = manage.prompt_for_rating("New rating (1-5): ")
+        model.edit_entry("books", "id", book_id, "rating", new_rating)
+    elif col_select == "Genre":
+        genre_id = select_genre(model)
+        model.edit_entry("books_genres", "book_id", book_id, "genre_id", genre_id)
+
+def delete_book(model: CSVDataModel, book_id: int):
+    """ Delete a book entry from the books database
+
+    Deletes the book entry associated with a given book ID from the books
+    table. Separate functions are used to propagate the change through all
+    other linked tables.
+
+    Args:
+        model: Current CSVDataModel instance
+        book_id: ID of the book entry to delte.
+    """
+
+    model.delete_entry("books", "id", book_id)
+    model.delete_entry("books_authors", "book_id", book_id)
+    model.delete_entry("books_genres", "book_id", book_id)
+    # model.delete_entry("books_series", "book_id", book_id)
+    model.delete_entry("reading", "book_id", book_id)
+
+def manage_books_table(model: CSVDataModel, mode: str):
+    """ Parent function for managing the entries in the books table
+
+    Controls the execution of different management modes for the books table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        model: Current CSVDataModel instance
+        mode: Indicates whether to use the add, edit, or delete processes.
+    """
+    title, results = manage.prompt_for_title("csv", model)
+
+    if mode == "add":
+        if len(results) == 0:
+            add_book(model, title)
         else:
-            reading_db = add_reading_entry(reading_db, data_directory, title)
-    elif mode == 'edit':
-        reading_db = edit_reading_entry(reading_db, data_directory, title)
+            to_edit_prompt = (f"\"{title}\" already exists in the books "
+                              "database. Would you like to edit the entry?")
+            if inputs.confirm(to_edit_prompt):
+                edit_book(model, results[title])
+ 
     else:
-        reading_db = delete_reading_entry(reading_db, data_directory, title)
+        while len(results) == 0:
+            print(f"\"{title}\" does not exist in the books database.")
+            title, results = manage.prompt_for_title("csv", model)
+        if mode == "edit":
+            edit_book(model, results[title])
+        else:
+            delete_book(model, results[title])
 
-    reading_db.sort_values(['Finish', 'Start'], na_position='last',  # type: ignore
-                           inplace=True)
-    reading_db.to_csv(reading_db_path, index=False)  # type: ignore
+### –------------ Mange Genres -------------- ###
 
-def main(db_select, mode, data_directory):
-    if db_select == 'books':
-        update_books_db(mode, data_directory)
+def add_genre(model: CSVDataModel, genre_name) -> int:
+    """ Add a new genre to the genre table
+
+    Adds a new genre to the genre table. There is no need for additional
+    checks for existing entries because upstream processes already contain
+    those checks.
+
+    Args:
+        model: Current CSVDataModel instance
+        name: Name of the new genre
+    
+    Returns:
+        (int): Genre ID of the new genre
+    """
+
+    new_id = model.add_entry("genres", {"name": genre_name})
+    return(new_id)  # type: ignore
+
+
+def edit_genre(model: CSVDataModel, name: str, genre_id: int):
+    """ Edit an existing entry in the genres table
+
+    Prompts the user to 1) select a property to modify and 2) provide the
+    new value for the property. Then, it runs the statements required to make
+    the updates to the entry.
+
+    Args:
+        model: Current CSVDataModel instance
+        entry_id: ID of the genre entry to edit.
+    """
+    model.edit_entry("genres", "id", genre_id, "name", name)
+
+
+def delete_genre(model: CSVDataModel, genre_id: int):
+    """ Delete a genre entry from the genres database
+
+    Deletes the genre from the genres database. This deletion will propogate
+    (cascade) to all other tables that reference the newly-deleted genre.
+
+    Args:
+        model: Current CSVDataModel instance
+        genre_id: ID of the genre to delete.
+    """
+    model.delete_entry("genres", "id", genre_id)
+    model.delete_entry("books_genres", "genre_id", genre_id)
+
+
+def manage_genres_table(model: CSVDataModel, mode: str):
+    """ Parent function for managing the entries in the genres table
+
+    Controls the execution of different management modes for the genres table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        model: Current CSVDataModel instance
+        mode: Indicates whether to use the add, edit, or delete processes.
+    """
+    genre_name, genre_result = manage.prompt_for_genre("csv", model)
+
+    if mode == "add":
+        if len(genre_result) == 0:
+            _ = add_genre(model, genre_name)
+        else:
+            print(f"\"{genre_name}\" already exists.")
     else:
-        update_reading_db(mode, data_directory)
+        while len(genre_result) == 0:
+            print(f"{genre_name} does not exist in the genres database")
+            genre_name, genre_result = manage.prompt_for_genre("csv",model)
+
+        if mode == "edit":
+            genre_id = genre_result[genre_name]
+            new_name = input("Please enter the new genre name: ")
+            edit_genre(model, new_name, genre_id)
+        else:
+            delete_genre(model, genre_result[genre_name])
+
+
+### –------------ Mange Reading ------------- ###
+
+def add_reading_entry(model: CSVDataModel, book_id: int) -> int:
+    """ Adds a new reading entry to the reading table
+
+    Prompts the user for information to add a new reading entry to the 
+    reading table. Then, generates the correct SQL query to insert a new
+    entry with the given information and returns the ID of the new entry
+
+    Args:
+        model: Current CSVDataModel instance
+        book_id: ID of the book to use for the new entry
+    
+    Returns:
+        The ID of the new reading entry
+    """
+    print("Please enter the following optional information.")
+    start = inputs.prompt_for_date("Start date: ")
+    finish = inputs.prompt_for_date("Finish date: ")
+    rating = manage.prompt_for_rating("Rating (1-5): ")
+
+    new_entry = {"book_id": book_id}
+    if start != "":
+        new_entry["start_date"] = start  # type: ignore - Datetime
+    if finish != "":
+        new_entry["finish_date"] = finish  # type: ignore - Datetime
+    if rating != "":
+        new_entry["rating"] = rating  # type: ignore - Int/Float
+
+    return(model.add_entry("reading", new_entry))  # type: ignore - Dynamic
+
+def edit_reading_entry(model: CSVDataModel, title: str, id_list: List[int]):
+    """ Edit an existing entry in the reading table
+
+    Prompts the user to 1) select a property to modify and 2) provide the
+    new value for the property. Then, it runs the neccessary statements to make
+    modifications to the target entry.
+
+    Args:
+        model: Current CSVDataModel instance
+        title: Title of the book to filter reading entries for.
+        id_list: List of entry ID's associated with the given title
+    """
+    book_id_list = [model.get_books_dict(title)[title]]
+
+    view_csv.print_table(model.generate_main_reading(filter="Title",
+                                                     id_list=book_id_list),
+                         show_index=True)
+
+    edit_id = inputs.prompt_from_choices(id_list, "Choose an entry to edit: ",
+                                         zero_indexed=True, use_index=False)
+
+    prop_opts = ["Title", "Start", "Finish", "Rating"]
+    print("\nWhich property would you like to edit?")
+    prop_select = inputs.prompt_from_choices(prop_opts)
+
+    if prop_select == "Title":
+        _, book_id = select_book(model)
+        model.edit_entry("reading", "id", edit_id, "book_id", book_id)
+
+    elif prop_select in {"Start", "Finish"}:
+        date = inputs.prompt_for_date(f"New {prop_select.lower()} date: ",
+                                          as_string=True)
+        col_name = "start_date" if prop_select == "Start" else "finish_date"
+        model.edit_entry("reading", "id", edit_id, col_name, date)
+    else:
+        new_rating = manage.prompt_for_rating("New Rating: ")
+        model.edit_entry("reading", "id", edit_id, "rating", new_rating)
+
+
+def delete_reading_entry(model: CSVDataModel, title: str, id_list: List[int]):
+    """ Delete a reading entry from the reading database
+
+    Deletes the reading entry associated with a given entry ID from the reading
+    table. This deletion will cascade to all associated entries with the
+    book id as a foreign key.
+
+    Args:
+        model: Current CSVDataModel instance
+        title: Title of the book to filter on
+        id_list: List of entries associated with the title
+    """
+    book_id_list = [model.get_books_dict(title)[title]]
+
+    view_csv.print_table(model.generate_main_reading(filter="Title",
+                                                     id_list=book_id_list),
+                         show_index=True)
+
+    edit_id = inputs.prompt_from_choices(id_list, "Choose an entry to delete: ",
+                                         zero_indexed=True, use_index=False)
+    model.delete_entry("reading", "id", edit_id)
+
+def manage_reading_table(model: CSVDataModel, mode: str):
+    """ Parent function for managing the entries in the reading table
+
+    Controls the execution of different management modes for the reading table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        model: Current CSVDataModel instance
+        mode: Indicates whether to use the add, edit, or delete processes.
+    """
+    title, book_id = select_book(model)
+    entry_id_list = model.get_reading_entries(book_id)
+
+    if mode == "add":
+        if len(entry_id_list) == 0:  # type: ignore
+            add_reading_entry(model, book_id)
+        else:
+            to_edit_prompt = (f"There are existing entries for {title}. "
+                               "Would you like to edit one of those entries?")
+            if inputs.confirm(to_edit_prompt):
+                edit_reading_entry(model, title, entry_id_list)  # type: ignore
+            else:
+                add_reading_entry(model, book_id)
+    else:
+        while len(entry_id_list) == 0:
+            print(f"\"{title}\" does not have any associated reading entries.")
+            title, book_id = select_book(model)
+            entry_id_list = model.get_reading_entries(book_id)
+        if mode == "edit":
+            edit_reading_entry(model, title, entry_id_list)
+        else:
+            delete_reading_entry(model, title, entry_id_list)
+
+
+### –------------ Mange Series -------------- ###
+
+
+def manage_series_table(model: CSVDataModel, mode: str):
+    """ Parent function for managing the entries in the series table
+
+    Controls the execution of different management modes for the series table.
+    Modes are selected via the initial command-line arguments and further
+    information is requested via interactive prompts.
+
+    Args:
+        model: Underlying CSVDataModel instance
+        mode: Indicates whether to use the add, edit, or delete processes.
+    
+    Todo:
+        * Implement series mangement workflow
+    """
+    print("Series management is not available at this time.")
+
+def main(db_select: str, mode: str, model: CSVDataModel):
+    """ Main module function
+    
+    Main manage module function to launch different workflows to manage the
+    different databases. Databases are first merged into a user-friendly
+    presentation.
+    
+    Args:
+        db_select: Which database to visualze.
+        mode: Which visualization mode to utilize.
+        model: Current CSVDataModel instance.
+
+    Todo:
+        * Implement series management
+    """
+
+    if db_select == "authors":
+        manage_authors_table(model, mode)
+    elif db_select == "books":
+        manage_books_table(model, mode)
+    elif db_select == "genres":
+        manage_genres_table(model, mode)
+    elif db_select == "reading":
+        manage_reading_table(model, mode)
